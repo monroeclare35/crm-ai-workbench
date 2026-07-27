@@ -1,341 +1,240 @@
 /**
- * CRM AI 智能工作台 — 前端应用
- *
- * 功能：多视图切换、流式对话、数据看板、客户卡片、知识库搜索
- * 架构：单页应用 (SPA)，通过 fetch + ReadableStream 与后端 SSE 接口通信
+ * CRM AI 智能工作台 — Frontend App v2.0
+ * SVG 迷你图表 · 客户数据表 · 报告卡片 · 知识搜索 · SSE 流式对话
  */
 
 // ============================================================
-// 状态管理
+// State
 // ============================================================
-
-const state = {
-  currentView: 'chat',
-  userId: 'dev-sales-001',   // 开发环境 Mock
-  sessionId: null,           // Agent 会话ID（跨轮对话复用）
-  isStreaming: false,
-};
+const S = { view:'chat', userId:'dev-sales-001', streaming:false };
 
 // ============================================================
-// 视图切换
+// Navigation
 // ============================================================
-
-function initNavigation() {
-  document.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-      e.preventDefault();
-      const view = item.dataset.view;
-      switchView(view);
-    });
-  });
-}
-
-function switchView(view) {
-  state.currentView = view;
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.querySelector(`.nav-item[data-view="${view}"]`)?.classList.add('active');
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  const viewEl = document.getElementById(`view-${view}`);
-  if (viewEl) viewEl.classList.add('active');
-
-  if (view === 'customers') renderCustomerCards();
-  if (view === 'knowledge') renderKnowledgeResults('');
+document.querySelectorAll('.nav-item[data-view]').forEach(el=>{
+  el.addEventListener('click',e=>{e.preventDefault();switchView(el.dataset.view)})
+});
+function switchView(v){
+  S.view=v;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelector(`.nav-item[data-view="${v}"]`)?.classList.add('active');
+  document.querySelectorAll('.view').forEach(vw=>vw.classList.remove('active'));
+  document.getElementById(`view-${v}`)?.classList.add('active');
+  if(v==='dashboard') renderCharts();
+  if(v==='customers') renderCustomerTable();
+  if(v==='reports') renderReports();
+  if(v==='knowledge') renderKnowledge();
 }
 
 // ============================================================
-// 对话功能
+// SVG Mini Sparklines
 // ============================================================
-
-const chatMessages = document.getElementById('chat-messages');
-const chatInput = document.getElementById('chat-input');
-const sendBtn = document.getElementById('send-btn');
-const chatLoading = document.getElementById('chat-loading');
-const modelSelect = document.getElementById('model-select');
-
-function initChat() {
-  sendBtn.addEventListener('click', sendMessage);
-  chatInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  });
-  chatInput.addEventListener('input', () => {
-    chatInput.style.height = 'auto';
-    chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
-  });
-
-  // 快捷按钮
-  document.querySelectorAll('.quick-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      chatInput.value = btn.dataset.prompt;
-      sendMessage();
-    });
-  });
-
-  // 新对话
-  document.getElementById('new-chat-btn').addEventListener('click', () => {
-    state.sessionId = null;
-    chatMessages.innerHTML = '';
-    addWelcomeMessage();
-  });
+function sparkSVG(data,color,width=60,height=32){
+  const pts=data.map((v,i)=>`${(i/(data.length-1))*width},${height-(v/Math.max(...data))*height}`);
+  return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 
-async function sendMessage() {
-  const message = chatInput.value.trim();
-  if (!message || state.isStreaming) return;
+// ============================================================
+// Dashboard Charts (SVG)
+// ============================================================
+function renderCharts(){
+  const cost=[82,88,78,92,85,95,90,98,102,96,108,105,112,118,115,125,120,128,130,122,135,128,140,145,138,148,142,155,150,160];
+  const roi=[3.1,2.9,3.0,3.2,3.0,2.8,2.9,3.1,2.7,2.8,2.6,2.9,2.8,2.7,2.9,2.8,2.6,2.82];
+  const active=[38,39,38,40,41,42,41,43,42,44,43,45,44,46,45,47,46,47];
+  document.getElementById('spark-cost').innerHTML=sparkSVG(cost,'#2563EB');
+  document.getElementById('spark-roi').innerHTML=sparkSVG(roi,'#059669',60,32);
+  document.getElementById('spark-active').innerHTML=sparkSVG(active,'#0284C7',60,32);
 
-  state.isStreaming = true;
-  chatInput.value = '';
-  chatInput.style.height = 'auto';
-  sendBtn.disabled = true;
-  chatLoading.classList.remove('hidden');
+  // Trend chart
+  const trendEl=document.getElementById('chart-trend');
+  if(trendEl){
+    const w=600,h=220,pad=40;
+    const pts=cost.map((v,i)=>`${pad+(i/(cost.length-1))*(w-2*pad)},${h-pad-(v/Math.max(...cost))*(h-2*pad)}`);
+    const area=pts.join(' ')+` ${pad+(cost.length-1)/(cost.length-1)*(w-2*pad)},${h-pad} ${pad},${h-pad}`;
+    trendEl.innerHTML=`<svg viewBox="0 0 ${w} ${h}" width="100%" height="220">
+      <defs><linearGradient id="tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2563EB" stop-opacity="0.15"/><stop offset="100%" stop-color="#2563EB" stop-opacity="0"/></linearGradient></defs>
+      <polygon points="${area}" fill="url(#tg)"/>
+      <polyline points="${pts.join(' ')}" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      ${[0,.25,.5,.75,1].map(x=>`<line x1="${pad}" y1="${h-pad-x*(h-2*pad)}" x2="${pad+(cost.length-1)/(cost.length-1)*(w-2*pad)}" y2="${h-pad-x*(h-2*pad)}" stroke="#E4E7ED" stroke-width="0.5" stroke-dasharray="4,4"/>`).join('')}
+    </svg>`;
+  }
 
-  // 添加用户消息
-  appendMessage('user', message);
-  scrollToBottom();
+  // Health pie
+  const healthEl=document.getElementById('chart-health');
+  if(healthEl){
+    const total=47,healthy=32,warning=10,risk=5;
+    const cx=100,cy=110,r=80;
+    const arcs=[{v:healthy,c:'#059669'},{v:warning,c:'#D97706'},{v:risk,c:'#DC2626'}];
+    let ang=0;
+    const slices=arcs.map(a=>{const pct=a.v/total,a0=ang,sw=a.v/total*2*Math.PI;ang+=sw;return `<path d="${describeArc(cx,cy,r,a0,ang)}" fill="${a.c}" opacity="0.85"/>`}).join('');
+    healthEl.innerHTML=`<svg viewBox="0 0 200 220" width="100%" height="220">
+      ${slices}
+      <text x="${cx}" y="${cy-6}" text-anchor="middle" font-size="28" font-weight="700" fill="#1A1D26">${total}</text>
+      <text x="${cx}" y="${cy+16}" text-anchor="middle" font-size="11" fill="#5F6675">客户总数</text>
+    </svg>
+    <div style="display:flex;gap:12px;justify-content:center;margin-top:8px;font-size:11.5px;">
+      <span style="color:#059669">● 健康 ${healthy}</span><span style="color:#D97706">● 关注 ${warning}</span><span style="color:#DC2626">● 风险 ${risk}</span>
+    </div>`;
+  }
 
-  try {
-    const response = await fetch('/api/v1/chat/stream', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-User-Id': state.userId,
-      },
-      body: JSON.stringify({
-        message,
-        task_type: modelSelect.value,
-        session_id: state.sessionId,
-      }),
-    });
+  // Industry bar
+  const industryEl=document.getElementById('chart-industry');
+  if(industryEl){
+    const data=[{l:'电商',v:42,c:'#2563EB'},{l:'游戏',v:28,c:'#7C3AED'},{l:'教育',v:15,c:'#059669'},{l:'AI/科技',v:10,c:'#F59E0B'},{l:'其他',v:5,c:'#6B7280'}];
+    const maxW=160,bh=26,gap=10;
+    industryEl.innerHTML=`<svg viewBox="0 0 200 180" width="100%" height="220">
+      ${data.map((d,i)=>`<rect x="20" y="${i*(bh+gap)+10}" width="${d.v/maxW*160}" height="${bh}" rx="5" fill="${d.c}" opacity="0.85"/><text x="${d.v/maxW*160+26}" y="${i*(bh+gap)+10+bh/2+4}" font-size="11" fill="#1A1D26" font-weight="500">${d.l} ${d.v}%</text>`).join('')}
+    </svg>`;
+  }
+}
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
+function describeArc(cx,cy,r,start,end){
+  const x1=cx+r*Math.cos(start),y1=cy+r*Math.sin(start),x2=cx+r*Math.cos(end),y2=cy+r*Math.sin(end);
+  const large=end-start>Math.PI?1:0;
+  return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
+}
 
-    // 读取 SSE 流
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let assistantDiv = null;
-    let fullContent = '';
+// ============================================================
+// Customer Table
+// ============================================================
+const CUSTOMERS=[
+  {id:'C001',name:'上海美妆科技有限公司',industry:'电商',region:'华东区',level:'S',cost:'285万',roi:3.3,trend:'up',health:'healthy'},
+  {id:'C002',name:'杭州鲸灵网络有限公司',industry:'游戏',region:'华东区',level:'A',cost:'152万',roi:1.3,trend:'down',health:'warning'},
+  {id:'C003',name:'南京星辉教育科技有限公司',industry:'教育',region:'华东区',level:'B',cost:'68万',roi:2.1,trend:'stable',health:'warning'},
+  {id:'C004',name:'北京未来科技有限公司',industry:'AI/科技',region:'华北区',level:'S',cost:'520万',roi:4.5,trend:'up',health:'healthy'},
+  {id:'C005',name:'深圳鹏程电商有限公司',industry:'电商',region:'华南区',level:'A',cost:'890万',roi:2.9,trend:'stable',health:'healthy'},
+];
+function renderCustomerTable(){
+  const tbody=document.getElementById('customer-tbody');
+  if(!tbody)return;
+  const healthLabel={healthy:'健康',warning:'关注',risk:'风险'};
+  tbody.innerHTML=CUSTOMERS.map(c=>`<tr onclick="switchView('chat');document.getElementById('chat-input').value='帮我看看${c.name}的详细情况，包括消耗趋势和健康度评估';document.getElementById('send-btn').click()">
+    <td style="font-weight:600">${c.name}</td><td>${c.industry}</td><td>${c.region}</td>
+    <td><span class="level-badge level-${c.level}">${c.level}</span></td>
+    <td style="font-weight:600">¥${c.cost} <span class="cost-${c.trend}">${c.trend==='up'?'↑':c.trend==='down'?'↓':'→'}</span></td>
+    <td style="font-weight:600">${c.roi}</td>
+    <td><span class="health-dot health-${c.health}"></span>${healthLabel[c.health]}</td>
+    <td><button class="btn-sm" onclick="event.stopPropagation();switchView('chat');document.getElementById('chat-input').value='给我${c.name}出一份投放优化方案';document.getElementById('send-btn').click()">分析</button></td>
+  </tr>`).join('');
+}
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+// ============================================================
+// Reports
+// ============================================================
+function renderReports(){
+  const grid=document.getElementById('report-grid');
+  if(!grid)return;
+  const reports=[{icon:'📋',title:'华东区周报','date:'2026-07-27','desc':'本周区域消耗 ¥1,285万，环比 +12.5%。5个客户需要重点关注...',meta:'2小时前 · AI生成'},{icon:'📊',title:'上海美妆月报','date:'2026年7月','desc':'月消耗 ¥285万，ROI 3.3，趋势向好。建议加大千川投放...',meta:'昨天 · AI生成'},{icon:'🔬',title:'教育行业Q2分析','date:'2026 Q2','desc':'教育行业广告投放趋势、政策合规动态、头部客户案例分析...',meta:'3天前 · Deep Research'},{icon:'📋',title:'杭州鲸灵优化方案','date:'2026-07-26','desc':'ROI从1.5降至1.3，诊断材料衰减+出价策略问题，建议...',meta:'昨天 · AI生成'}];
+  grid.innerHTML=reports.map(r=>`<div class="report-card"><div class="report-icon">${r.icon}</div><h4>${r.title}</h4><p>${r.desc}</p><div class="report-meta"><span>${r.date}</span><span>${r.meta}</span></div></div>`).join('');
+}
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';  // 最后不完整的行留在 buffer
+// ============================================================
+// Knowledge
+// ============================================================
+function renderKnowledge(q=''){
+  const container=document.getElementById('knowledge-results');
+  if(!container)return;
+  const docs=[{title:'巨量千川 oCPM 出价策略详解',content:'oCPM是千川智能出价产品，以转化为优化目标，系统自动调整出价。适用有明确转化目标和充足数据的广告主。日转化≥20个时效果最佳。',cat:'产品文档',src:'千川帮助中心',tags:['出价','oCPM','千川']},{title:'电商行业巨量千川投放最佳实践',content:'优化重点：素材CTR > 落地页CVR > 出价策略。短视频15-30秒最佳，前3秒必须有钩子，真人出镜CTR比图文高30%。',cat:'策略最佳实践',src:'运营团队',tags:['电商','千川','ROI']},{title:'教育行业广告投放合规要点',content:'学科类培训广告全面禁止投放。非学科需提供办学许可证。广告文案不得包含"保过""包就业"等用语。K12受众定向禁止年龄/年级标签。',cat:'投放政策',src:'审核中心',tags:['教育','合规','政策']},{title:'游戏买量ROI优化案例——杭州鲸灵网络',content:'通过素材优化（真人解说+KOL混剪）+定向优化（付费用户画像）+出价切换oCPM，ROI从1.2提升至2.5。关键：不看消耗，关注LTV/CAC。',cat:'行业案例',src:'案例库',tags:['游戏','ROI','案例']},{title:'巨量搜索广告投放指南',content:'用户在抖音搜索时展示广告，转化率是信息流的3-5倍。关键词四维覆盖：品牌词+品类词+竞品词+场景词。建议oCPC出价。',cat:'产品文档',src:'引擎帮助中心',tags:['搜索','SEM','关键词']}];
+  const filtered=q?docs.filter(d=>d.title.includes(q)||d.content.includes(q)||d.cat.includes(q)||d.tags.some(t=>t.includes(q))):docs;
+  container.innerHTML=filtered.map(d=>`<div class="k-card"><h4>${d.title}</h4><p>${d.content}</p><div class="k-meta"><span>📂 ${d.cat}</span><span>📖 ${d.src}</span><span>${d.tags.map(t=>'#'+t).join(' ')}</span></div></div>`).join('');
+}
+document.querySelectorAll('.k-cat').forEach(el=>{el.addEventListener('click',function(){document.querySelectorAll('.k-cat').forEach(e=>e.classList.remove('active'));this.classList.add('active');const c=this.textContent;renderKnowledge(c==='全部'?'':c)})});
+document.getElementById('knowledge-search-input')?.addEventListener('input',e=>renderKnowledge(e.target.value));
 
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const data = line.slice(6);
-        if (!data) continue;
+// ============================================================
+// Chat
+// ============================================================
+const chatMsgs=document.getElementById('chat-messages');
+const chatInput=document.getElementById('chat-input');
+const sendBtn=document.getElementById('send-btn');
+const loadingEl=document.getElementById('chat-loading');
+const newChatBtn=document.getElementById('new-chat-btn');
 
-        try {
-          const event = JSON.parse(data);
+function initChat(){
+  sendBtn.addEventListener('click',sendMsg);
+  chatInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg()}});
+  chatInput.addEventListener('input',()=>{chatInput.style.height='auto';chatInput.style.height=Math.min(chatInput.scrollHeight,140)+'px'});
+  document.querySelectorAll('.prompt-chip').forEach(btn=>{btn.addEventListener('click',()=>{chatInput.value=btn.dataset.prompt;sendMsg()})});
+  newChatBtn.addEventListener('click',()=>{chatMsgs.innerHTML='';addWelcome();});
+}
 
-          if (event.type === 'text_delta') {
-            if (!assistantDiv) {
-              assistantDiv = document.createElement('div');
-              assistantDiv.className = 'message assistant';
-              const contentDiv = document.createElement('div');
-              contentDiv.className = 'message-content';
-              assistantDiv.appendChild(contentDiv);
-              chatMessages.appendChild(assistantDiv);
-            }
-            fullContent += event.content;
-            // 渲染 Markdown（简单版）
-            assistantDiv.querySelector('.message-content').innerHTML = renderMarkdown(fullContent);
-            scrollToBottom();
-          } else if (event.type === 'tool_call') {
-            // 显示工具调用状态
-            const toolDiv = document.createElement('div');
-            toolDiv.className = 'message system';
-            toolDiv.innerHTML = `<div class="message-content" style="font-size:12px;color:var(--gray-500);">🔧 调用工具: <strong>${event.tool_name}</strong></div>`;
-            chatMessages.appendChild(toolDiv);
-            scrollToBottom();
-          } else if (event.type === 'done') {
-            state.sessionId = event.session_id || state.sessionId;
-            if (event.usage) {
-              console.log('Token usage:', event.usage);
-            }
-          } else if (event.type === 'error') {
-            appendMessage('system', `❌ 错误: ${event.content}`);
+function addWelcome(){
+  chatMsgs.innerHTML=`<div class="welcome-screen">
+    <div class="welcome-icon"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>
+    <h3>你好，张三</h3><p class="welcome-sub">我是你的 CRM AI 助手，可以帮你查询数据、分析客户、生成报告。</p>
+    <div class="quick-prompts">${Array.from(document.querySelectorAll('.prompt-chip')).map(b=>b.outerHTML).join('')}</div>
+  </div>`;
+  document.querySelectorAll('.prompt-chip').forEach(btn=>{btn.addEventListener('click',()=>{chatInput.value=btn.dataset.prompt;sendMsg()})});
+}
+
+async function sendMsg(){
+  const msg=chatInput.value.trim();
+  if(!msg||S.streaming)return;
+  S.streaming=true;chatInput.value='';chatInput.style.height='auto';sendBtn.disabled=true;
+  loadingEl.classList.remove('hidden');
+  // Remove welcome if present
+  const welcome=chatMsgs.querySelector('.welcome-screen');
+  if(welcome)welcome.remove();
+  // User message
+  chatMsgs.appendChild(msgEl('user',msg));
+  scrollDown();
+  try{
+    const resp=await fetch('/api/v1/chat/stream',{method:'POST',headers:{'Content-Type':'application/json','X-User-Id':S.userId},body:JSON.stringify({message:msg,task_type:document.getElementById('model-select')?.value||'chat'})});
+    if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
+    const reader=resp.body.getReader(),decoder=new TextDecoder();
+    let buffer='',asstEl=null,fullText='';
+    while(true){
+      const{value,done}=await reader.read();
+      if(done)break;
+      buffer+=decoder.decode(value,{stream:true});
+      const lines=buffer.split('\n');buffer=lines.pop()||'';
+      for(const line of lines){
+        if(!line.startsWith('data: '))continue;
+        const data=line.slice(6);if(!data)continue;
+        try{
+          const ev=JSON.parse(data);
+          if(ev.type==='text_delta'){
+            if(!asstEl){asstEl=document.createElement('div');asstEl.className='message assistant';asstEl.innerHTML='<div class="msg-bubble"></div>';chatMsgs.appendChild(asstEl)}
+            fullText+=ev.content;
+            asstEl.querySelector('.msg-bubble').innerHTML=md(fullText);
+            scrollDown();
+          }else if(ev.type==='tool_call'){
+            chatMsgs.appendChild(msgEl('system','🔧 调用: <strong>'+ev.tool_name+'</strong>'));
+            scrollDown();
+          }else if(ev.type==='done'){
+            // done
+          }else if(ev.type==='error'){
+            chatMsgs.appendChild(msgEl('system','❌ '+ev.content));
           }
-        } catch (e) {
-          console.error('Parse event error:', e, data);
-        }
+        }catch(e){}
       }
     }
-  } catch (error) {
-    appendMessage('system', `❌ 连接失败: ${error.message}`);
-  } finally {
-    state.isStreaming = false;
-    sendBtn.disabled = false;
-    chatLoading.classList.add('hidden');
-    chatInput.focus();
-    scrollToBottom();
+  }catch(e){
+    chatMsgs.appendChild(msgEl('system','❌ 连接失败: '+e.message));
+  }finally{
+    S.streaming=false;sendBtn.disabled=false;loadingEl.classList.add('hidden');chatInput.focus();
   }
 }
 
-function appendMessage(type, content) {
-  const div = document.createElement('div');
-  div.className = `message ${type}`;
-  const contentDiv = document.createElement('div');
-  contentDiv.className = 'message-content';
-  if (type === 'assistant') {
-    contentDiv.innerHTML = renderMarkdown(content);
-  } else {
-    contentDiv.textContent = content;
-  }
-  div.appendChild(contentDiv);
-  chatMessages.appendChild(div);
+function msgEl(type,content){
+  const el=document.createElement('div');el.className='message '+type;
+  if(type==='assistant')el.innerHTML='<div class="msg-bubble">'+md(content)+'</div>';
+  else el.innerHTML='<div class="msg-bubble">'+content+'</div>';
+  return el;
 }
+function scrollDown(){chatMsgs.scrollTop=chatMsgs.scrollHeight}
 
-function addWelcomeMessage() {
-  // 欢迎消息已在 HTML 中，新对话时重新添加
-  chatMessages.innerHTML = '';
-  const div = document.createElement('div');
-  div.className = 'message system';
-  div.innerHTML = `<div class="message-content">
-    <p>👋 你好！我是 CRM AI 助手。开始提问吧～</p>
-    <p class="hint">试试输入你的问题 👇</p>
-  </div>`;
-  chatMessages.appendChild(div);
-}
-
-/**
- * 简易 Markdown → HTML 渲染（生产环境可用 marked/markdown-it）
- */
-function renderMarkdown(text) {
-  if (!text) return '';
-  let html = text
-    // 标题
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    // 粗体/斜体
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    // 行内代码
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    // 代码块
-    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
-    // 无序列表
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    // 换行
-    .replace(/\n\n/g, '</p><p>')
-    .replace(/\n/g, '<br>');
-  html = '<p>' + html + '</p>';
-  // 修复空段落
-  html = html.replace(/<p><\/p>/g, '');
-  // 包装连续的 li
-  html = html.replace(/(<li>.*?<\/li>)+/g, '<ul>$&</ul>');
-  return html;
-}
-
-function scrollToBottom() {
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+// Simple Markdown
+function md(t){
+  return t.replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h2>$1</h2>').replace(/^# (.+)$/gm,'<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>').replace(/```(\w*)\n([\s\S]*?)```/g,'<pre><code>$2</code></pre>')
+    .replace(/^- (.+)$/gm,'<li>$1</li>').replace(/(<li>.*<\/li>\n?)+/g,'<ul>$&</ul>')
+    .replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');
 }
 
 // ============================================================
-// 客户卡片
+// Init
 // ============================================================
-
-const MOCK_CUSTOMERS = [
-  { id: 'C001', name: '上海美妆科技有限公司', industry: '电商', level: 'S', cost_30d: '285万', roi: 3.3, health: 'healthy' },
-  { id: 'C002', name: '杭州鲸灵网络有限公司', industry: '游戏', level: 'A', cost_30d: '152万', roi: 1.3, health: 'warning' },
-  { id: 'C003', name: '南京星辉教育科技有限公司', industry: '教育', level: 'B', cost_30d: '68万', roi: 2.1, health: 'warning' },
-  { id: 'C004', name: '北京未来科技有限公司', industry: 'AI/科技', level: 'S', cost_30d: '520万', roi: 4.5, health: 'healthy' },
-  { id: 'C005', name: '深圳鹏程电商有限公司', industry: '电商', level: 'A', cost_30d: '890万', roi: 2.9, health: 'healthy' },
-];
-
-function renderCustomerCards() {
-  const grid = document.getElementById('customer-grid');
-  if (!grid) return;
-
-  const levelClass = { S: 'level-S', A: 'level-A', B: 'level-B', C: 'level-C' };
-  const healthIcon = { healthy: '🟢', warning: '🟡', risk: '🔴' };
-
-  grid.innerHTML = MOCK_CUSTOMERS.map(c => `
-    <div class="customer-card" onclick="switchView('chat'); chatInput.value='帮我看看${c.name}的详细情况'; sendMessage();">
-      <div class="card-header">
-        <span class="customer-name">${c.name}</span>
-        <span class="customer-level ${levelClass[c.level] || ''}">${c.level}</span>
-      </div>
-      <div class="card-stats">
-        <span>行业: ${c.industry}</span>
-        <span>近30天消耗: <strong>¥${c.cost_30d}</strong></span>
-      </div>
-      <div class="card-stats" style="margin-top:6px;">
-        <span>ROI: <strong>${c.roi}</strong></span>
-        <span>状态: <span class="badge-${c.health}">${healthIcon[c.health] || ''}</span></span>
-      </div>
-    </div>
-  `).join('');
-}
-
-// ============================================================
-// 知识库搜索
-// ============================================================
-
-function renderKnowledgeResults(query = '') {
-  const container = document.getElementById('knowledge-results');
-  if (!container) return;
-
-  const mockResults = [
-    { title: '巨量千川 oCPM 出价策略详解', content: 'oCPM是千川智能出价产品，以转化为优化目标...', category: '产品', source: '千川帮助中心' },
-    { title: '电商行业投放最佳实践', content: '优化重点：素材CTR > 落地页CVR > 出价策略...', category: '策略', source: '运营团队' },
-    { title: '教育行业广告合规要点', content: '学科类培训广告全面禁止投放，非学科需提供资质...', category: '政策', source: '审核中心' },
-    { title: '游戏买量ROI优化案例', content: '通过素材优化+定向+出价策略将ROI从1.2提升至2.5...', category: '案例', source: '案例库' },
-    { title: '巨量搜索广告投放指南', content: '搜索流量转化率是信息流的3-5倍，短语匹配为主...', category: '产品', source: '引擎帮助中心' },
-  ];
-
-  const filtered = query
-    ? mockResults.filter(r => r.title.includes(query) || r.content.includes(query) || r.category.includes(query))
-    : mockResults;
-
-  container.innerHTML = filtered.map(r => `
-    <div class="knowledge-item">
-      <h4>${r.title}</h4>
-      <p>${r.content}</p>
-      <div class="meta">
-        <span>📂 ${r.category}</span>
-        <span>📖 ${r.source}</span>
-      </div>
-    </div>
-  `).join('');
-}
-
-// 知识库搜索事件
-document.getElementById('knowledge-search-input')?.addEventListener('input', (e) => {
-  renderKnowledgeResults(e.target.value);
-});
-
-// 分类标签点击
-document.querySelectorAll('.knowledge-categories .tag').forEach(tag => {
-  tag.addEventListener('click', function () {
-    document.querySelectorAll('.knowledge-categories .tag').forEach(t => t.classList.remove('active'));
-    this.classList.add('active');
-    const cat = this.textContent;
-    if (cat === '全部') {
-      renderKnowledgeResults('');
-    } else {
-      renderKnowledgeResults(cat);
-    }
-  });
-});
-
-// ============================================================
-// 初始化
-// ============================================================
-
-function init() {
-  initNavigation();
-  initChat();
-  renderCustomerCards();
-}
-
-document.addEventListener('DOMContentLoaded', init);
+function init(){initChat();renderCustomerTable();renderReports();renderKnowledge();renderCharts();}
+document.addEventListener('DOMContentLoaded',init);
