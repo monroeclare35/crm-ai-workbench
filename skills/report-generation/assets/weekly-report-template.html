@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>客户周报模板</title></head>
+<body style="font-family: -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
+
+<h1 style="color: #111827;">{客户名称} 周报</h1>
+<p style="color: #6B7280;">报告周期：{start_date} — {end_date} | 生成时间：{generated_at}</p>
+
+<h2 style="color: #4F46E5; border-bottom: 2px solid #E5E7EB; padding-bottom: 8px;">一、核心指标概览</h2>
+<table style="width:100%; border-collapse:collapse;">
+  <tr style="background:#F9FAFB;"><th style="padding:10px;text-align:left;border:1px solid #E5E7EB;">指标</th><th style="padding:10px;text-align:right;border:1px solid #E5E7EB;">本期值</th><th style="padding:10px;text-align:right;border:1px solid #E5E7EB;">上期值</th><th style="padding:10px;text-align:right;border:1px solid #E5E7EB;">环比变化</th></tr>
+  <tr><td style="padding:8px;border:1px solid #E5E7EB;">消耗</td><td style="padding:8px;text-align:right;border:1px solid #E5E7EB;">¥{cost_current}</td><td style="padding:8px;text-align:right;border:1px solid #E5E7EB;">¥{cost_prev}</td><td style="padding:8px;text-align:right;border:1px solid #E5E7EB; color: {cost_color};">{cost_change}</td></tr>
+  <tr><td style="padding:8px;border:1px solid #E5E7EB;">ROI</td><td style="padding:8px;text-align:right;border:1px solid #E5E7EB;">{roi_current}</td><td style="padding:8px;text-align:right;border:1px solid #E5E7EB;">{roi_prev}</td><td style="padding:8px;text-align:right;border:1px solid #E5E7EB; color: {roi_color};">{roi_change}</td></tr>
+  <tr><td style="padding:8px;border:1px solid #E5E7EB;">CTR</td><td style="padding:8px;text-align:right;border:1px solid #E5E7EB;">{ctr_current}%</td><td style="padding:8px;text-align:right;border:1px solid #E5E7EB;">{ctr_prev}%</td><td style="padding:8px;text-align:right;border:1px solid #E5E7EB; color: {ctr_color};">{ctr_change}</td></tr>
+</table>
+
+<h2 style="color: #4F46E5; border-bottom: 2px solid #E5E7EB; padding-bottom: 8px;">二、趋势分析</h2>
+<p>{trend_summary}</p>
+<div id="trend-chart" style="height:300px; background:#F9FAFB; border:1px solid #E5E7EB; border-radius:8px; margin:12px 0;"></div>
+
+<h2 style="color: #4F46E5; border-bottom: 2px solid #E5E7EB; padding-bottom: 8px;">三、异常检测</h2>
+{anomaly_section}
+
+<h2 style="color: #4F46E5; border-bottom: 2px solid #E5E7EB; padding-bottom: 8px;">四、优化建议</h2>
+<ol>
+  {suggestions}
+</ol>
+
+<h2 style="color: #4F46E5; border-bottom: 2px solid #E5E7EB; padding-bottom: 8px;">五、下周计划</h2>
+<ul>
+  <li>计划动作1</li>
+  <li>计划动作2</li>
+  <li>计划动作3</li>
+</ul>
+
+<p style="color: #9CA3AF; font-size: 12px; margin-top: 40px;">本报告由 CRM AI 智能工作台自动生成</p>
+</body>
+</html>

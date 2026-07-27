@@ -1,0 +1,54 @@
+{
+  "mcpServers": {
+    "crm_data": {
+      "type": "sdk",
+      "name": "crm_data",
+      "version": "1.0.0"
+    },
+    "ad_knowledge": {
+      "type": "sdk",
+      "name": "ad_knowledge",
+      "version": "1.0.0"
+    },
+    "analytics": {
+      "type": "sdk",
+      "name": "analytics",
+      "version": "1.0.0"
+    },
+    "messaging": {
+      "type": "sdk",
+      "name": "messaging",
+      "version": "1.0.0"
+    },
+    "document": {
+      "type": "sdk",
+      "name": "document",
+      "version": "1.0.0"
+    },
+    "workflow": {
+      "type": "sdk",
+      "name": "workflow",
+      "version": "1.0.0"
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
+    }
+  },
+  "allowedTools": [
+    "Bash",
+    "Read",
+    "Write",
+    "Edit",
+    "Glob",
+    "Grep",
+    "Skill",
+    "Task",
+    "mcp__crm_data__*",
+    "mcp__ad_knowledge__*",
+    "mcp__analytics__*",
+    "mcp__messaging__*",
+    "mcp__document__*",
+    "mcp__workflow__*"
+  ]
+}

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRM AI 智能工作台</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<!-- ===== 侧边栏 ===== -->
+<aside id="sidebar">
+  <div class="sidebar-header">
+    <h1>🚀 CRM AI</h1>
+    <span class="version">v0.3.0</span>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a href="#" class="nav-item active" data-view="chat">
+      <span class="nav-icon">💬</span> 智能对话
+    </a>
+    <a href="#" class="nav-item" data-view="dashboard">
+      <span class="nav-icon">📊</span> 数据看板
+    </a>
+    <a href="#" class="nav-item" data-view="reports">
+      <span class="nav-icon">📋</span> 报告中心
+    </a>
+    <a href="#" class="nav-item" data-view="customers">
+      <span class="nav-icon">👥</span> 客户管理
+    </a>
+    <a href="#" class="nav-item" data-view="knowledge">
+      <span class="nav-icon">📚</span> 知识库
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-info">
+      <div class="avatar">张</div>
+      <div class="user-details">
+        <span class="user-name">张三</span>
+        <span class="user-role">销售 · 华东区</span>
+      </div>
+    </div>
+    <button id="settings-btn" class="icon-btn" title="设置">⚙️</button>
+  </div>
+</aside>
+
+<!-- ===== 主内容区 ===== -->
+<main id="main-content">
+
+  <!-- 智能对话视图 -->
+  <section id="view-chat" class="view active">
+    <div class="chat-container">
+      <div class="chat-header">
+        <h2>智能对话</h2>
+        <div class="chat-actions">
+          <button id="new-chat-btn" class="btn btn-outline">+ 新对话</button>
+          <select id="model-select" class="select-sm">
+            <option value="chat">DeepSeek V3</option>
+            <option value="analysis">Kimi K2 (分析)</option>
+            <option value="deep_research">Kimi K2 (深度调研)</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="chat-messages" class="chat-messages">
+        <!-- 欢迎消息 -->
+        <div class="message system">
+          <div class="message-content">
+            <p>👋 你好！我是 CRM AI 助手。</p>
+            <p>我可以帮你：</p>
+            <ul>
+              <li>🔍 <strong>查询客户数据</strong> — "华东区教育行业消耗TOP10"</li>
+              <li>📊 <strong>分析投放效果</strong> — "分析XX客户的ROI变化趋势"</li>
+              <li>💡 <strong>策略建议</strong> — "XX客户消耗下降怎么办？"</li>
+              <li>📋 <strong>生成报告</strong> — "生成本周华东区运营周报"</li>
+              <li>🔬 <strong>深度调研</strong> — "教育行业2026广告趋势调研"</li>
+            </ul>
+            <p class="hint">试试输入你的问题 👇</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="chat-loading" class="chat-loading hidden">
+        <div class="typing-indicator">
+          <span></span><span></span><span></span>
+          <span class="loading-text">思考中...</span>
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <div class="quick-actions">
+          <button class="quick-btn" data-prompt="帮我看看我负责的客户近况">📊 客户近况</button>
+          <button class="quick-btn" data-prompt="哪些客户最近有异常？">⚠️ 异常检测</button>
+          <button class="quick-btn" data-prompt="帮我生成今天的客户晨报">📋 今日晨报</button>
+          <button class="quick-btn" data-prompt="教育行业的投放最佳实践是什么？">📚 查知识</button>
+        </div>
+        <div class="input-row">
+          <textarea id="chat-input" placeholder="输入你的问题... (Enter 发送, Shift+Enter 换行)" rows="1"></textarea>
+          <button id="send-btn" class="btn btn-primary">发送</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 数据看板视图 -->
+  <section id="view-dashboard" class="view">
+    <div class="dashboard-header">
+      <h2>数据看板</h2>
+      <div class="dashboard-filters">
+        <select><option>华东区</option><option>华北区</option><option>华南区</option></select>
+        <select><option>近7天</option><option>近30天</option><option>本月</option></select>
+      </div>
+    </div>
+    <div class="dashboard-grid">
+      <div class="stat-card">
+        <div class="stat-label">总消耗</div>
+        <div class="stat-value">¥1,285万</div>
+        <div class="stat-change up">↑ 12.5%</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">活跃客户</div>
+        <div class="stat-value">47</div>
+        <div class="stat-change up">↑ 3</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">平均ROI</div>
+        <div class="stat-value">2.8</div>
+        <div class="stat-change down">↓ 0.3</div>
+      </div>
+      <div class="stat-card warning">
+        <div class="stat-label">⚠️ 异常客户</div>
+        <div class="stat-value">5</div>
+        <div class="stat-change">需关注</div>
+      </div>
+    </div>
+    <div class="dashboard-charts">
+      <div class="chart-panel" id="trend-chart">
+        <h3>消耗趋势</h3>
+        <div class="chart-placeholder">📈 图表区域（生产环境接入 ECharts）</div>
+      </div>
+      <div class="chart-panel" id="health-chart">
+        <h3>客户健康度分布</h3>
+        <div class="chart-placeholder">🥧 图表区域</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 报告中心视图 -->
+  <section id="view-reports" class="view">
+    <h2>报告中心</h2>
+    <div class="report-list">
+      <div class="report-item"><span>📋</span> 华东区周报_20260727.md <small>2小时前</small></div>
+      <div class="report-item"><span>📋</span> 上海美妆客户月报_202607.md <small>昨天</small></div>
+      <div class="report-item"><span>📋</span> 教育行业Q2分析报告.md <small>3天前</small></div>
+    </div>
+  </section>
+
+  <!-- 客户管理视图 -->
+  <section id="view-customers" class="view">
+    <h2>客户管理</h2>
+    <div class="customer-grid" id="customer-grid">
+      <!-- JS 动态填充 -->
+    </div>
+  </section>
+
+  <!-- 知识库视图 -->
+  <section id="view-knowledge" class="view">
+    <h2>知识库</h2>
+    <div class="knowledge-search">
+      <input type="text" placeholder="搜索广告知识..." id="knowledge-search-input">
+      <button class="btn btn-primary">搜索</button>
+    </div>
+    <div class="knowledge-categories">
+      <span class="tag active">全部</span><span class="tag">政策</span>
+      <span class="tag">策略</span><span class="tag">案例</span><span class="tag">产品</span>
+      <span class="tag">FAQ</span>
+    </div>
+    <div id="knowledge-results" class="knowledge-results"></div>
+  </section>
+
+</main>
+
+<script src="js/app.js"></script>
+</body>
+</html>
