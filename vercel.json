@@ -1,14 +1,7 @@
 {
-  "buildCommand": "pip install -r requirements-vercel.txt && mkdir -p .vercel/output/static && cp -r frontend/* .vercel/output/static/",
-  "outputDirectory": ".vercel/output/static",
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "https://crm-ai-workbench-api.onrender.com/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
-  ]
+  "framework": null,
+  "installCommand": null,
+  "buildCommand": null,
+  "outputDirectory": "frontend",
+  "cleanUrls": true
 }
