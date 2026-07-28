@@ -184,7 +184,7 @@ function simulateAgentTrace(msg){
   else if(msg.indexOf('周报')>-1||msg.indexOf('报告')>-1){plan.push({icon:'📋',type:'tool',text:'调用 ad_platform__query_metrics 批量拉数据'});plan.push({icon:'🧮',type:'think',text:'异常检测 + 排名 + 趋势分析'});}
   else{plan.push({icon:'🧠',type:'think',text:'综合分析中...'});}
   plan.push({icon:'✔️',type:'done',text:'生成结果'});
-  plan.forEach(function(s,i){setTimeout(function(){var el=document.createElement('div');el.className='trace-step '+s.type;el.innerHTML='<span class="step-icon">'+s.icon+'</span><span class="step-body">'+s.text+'</span><span class="step-time">'+(i*0.2).toFixed(1)+'s</span>';steps.appendChild(el);steps.scrollTop=steps.scrollHeight;if(i===plan.length-1)setTimeout(function(){document.getElementById('agent-trace').classList.add('hidden')},1500)},i*350});
+  plan.forEach(function(s,i){setTimeout(function(){var el=document.createElement('div');el.className='trace-step '+s.type;el.innerHTML='<span class="step-icon">'+s.icon+'</span><span class="step-body">'+s.text+'</span><span class="step-time">'+(i*0.2).toFixed(1)+'s</span>';steps.appendChild(el);steps.scrollTop=steps.scrollHeight;if(i===plan.length-1)setTimeout(function(){document.getElementById('agent-trace').classList.add('hidden')},1500)},i*350)});
 }
 
 function toggleTrace(){var s=document.getElementById('trace-steps');var btn=document.getElementById('trace-collapse');if(s.style.display==='none'){s.style.display='';btn.textContent='收起 ▴'}else{s.style.display='none';btn.textContent='展开 ▾'}}
