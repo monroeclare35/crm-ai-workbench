@@ -126,6 +126,8 @@ async def chat_stream(req:ChatReq):
                                 if d.get("type")=="text_delta":yield f"data: {json.dumps({'type':'text_delta','content':d.get('text','')},ensure_ascii=False)}\n\n"
                     except:pass
                 elif isinstance(msg,ResultMessage):
+                    r=getattr(msg,'result',None)
+                    if r: yield f"data: {json.dumps({'type':'text_delta','content':str(r)},ensure_ascii=False)}\n\n"
                     u=getattr(msg,'usage',None); tk={"input_tokens":0,"output_tokens":0}
                     if isinstance(u,dict):tk=u
                     yield f"data: {json.dumps({'type':'done','usage':tk},ensure_ascii=False)}\n\n"
