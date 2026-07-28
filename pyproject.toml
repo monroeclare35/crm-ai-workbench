@@ -10,7 +10,7 @@ authors = [
 
 dependencies = [
     # Claude Agent SDK — 核心引擎
-    "claude-agent-sdk>=0.17.0",
+    "claude-agent-sdk>=0.2.0",
 
     # Web 框架
     "fastapi>=0.115.0",

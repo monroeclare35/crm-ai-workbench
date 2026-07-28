@@ -10,11 +10,12 @@
 // ============================================================
 var API_CONFIG = { baseUrl: '', apiKey: '', model: '' };
 
-// 预设配置 — 可直接调用的 API 端点
+// 预设配置 — API端点
 var PRESETS = {
   deepseek: { apiUrl: 'https://api.deepseek.com/v1/chat/completions', model: 'deepseek-v4-pro' },
   kimi:     { apiUrl: 'https://api.moonshot.ai/v1/chat/completions',  model: 'kimi-k2.6' },
-  glm:      { apiUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions', model: 'glm-4.5' }
+  glm:      { apiUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions', model: 'glm-4.5' },
+  agent:    { apiUrl: '/api/v1/chat/stream', model: 'agent-sdk', isAgent: true }
 };
 
 function loadSettings(){
@@ -43,11 +44,13 @@ function applyPreset(name){
 }
 
 function saveSettings(){
-  API_CONFIG.apiUrl=document.getElementById('set-api-url').value.trim();
+  var apiUrl=document.getElementById('set-api-url').value.trim();
+  API_CONFIG.apiUrl=apiUrl;
   API_CONFIG.apiKey=document.getElementById('set-api-key').value.trim();
   API_CONFIG.model=document.getElementById('set-model').value.trim();
+  API_CONFIG.isAgent=(apiUrl.indexOf('/api/v1/chat/stream')>-1||apiUrl.indexOf('localhost')>-1);
   localStorage.setItem('crm_ai_settings',JSON.stringify(API_CONFIG));
-  document.getElementById('settings-msg').textContent='✓ 已保存';
+  document.getElementById('settings-msg').textContent='[OK] '+(API_CONFIG.isAgent?'Agent SDK Mode':'Direct API Mode');
   setTimeout(function(){document.getElementById('settings-overlay').classList.add('hidden')},800);
 }
 
@@ -174,6 +177,87 @@ function initChat() {
   });
 }
 
+// Agent API 模式 — 调用真实 Claude Agent SDK 后端
+async function sendViaAgentAPI(message, apiUrl) {
+  try {
+    var response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({message: message, task_type: 'chat'})
+    });
+
+    if (!response.ok) {
+      var errText = await response.text();
+      throw new Error('HTTP ' + response.status + ': ' + (errText||'').substring(0, 200));
+    }
+
+    var reader = response.body.getReader();
+    var decoder = new TextDecoder();
+    var buffer = '';
+    var assistantDiv = null;
+    var fullContent = '';
+
+    while (true) {
+      var result = await reader.read();
+      if (result.done) break;
+      buffer += decoder.decode(result.value, {stream: true});
+      var lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        if (!line.startsWith('data: ')) continue;
+        var data = line.slice(6).trim();
+        if (!data) continue;
+
+        try {
+          var ev = JSON.parse(data);
+          if (ev.type === 'text_delta') {
+            if (!assistantDiv) {
+              assistantDiv = document.createElement('div');
+              assistantDiv.className = 'message assistant';
+              assistantDiv.innerHTML = '<div class="message-content"></div>';
+              chatMessages.appendChild(assistantDiv);
+            }
+            fullContent += ev.content;
+            assistantDiv.querySelector('.message-content').innerHTML = renderMarkdown(fullContent);
+            scrollToBottom();
+          } else if (ev.type === 'tool_call') {
+            // Agent 正在调工具 — 显示在 trace 面板
+            var trace = document.getElementById('agent-trace');
+            var steps = document.getElementById('trace-steps');
+            trace.classList.remove('hidden');
+            var stepEl = document.createElement('div');
+            stepEl.className = 'trace-step tool';
+            stepEl.innerHTML = '<span class="step-icon">[==]</span><span class="step-body">调用: <strong>' + ev.tool_name + '</strong> ' + JSON.stringify(ev.tool_input||{}).substring(0, 100) + '</span>';
+            steps.appendChild(stepEl);
+            steps.scrollTop = steps.scrollHeight;
+            // 也显示在聊天里
+            var toolDiv = document.createElement('div');
+            toolDiv.className = 'message system';
+            toolDiv.innerHTML = '<div class="message-content" style="font-size:12px;color:var(--text3)">[工具调用] ' + ev.tool_name + '</div>';
+            chatMessages.appendChild(toolDiv);
+            scrollToBottom();
+          } else if (ev.type === 'done') {
+            if (ev.usage) {
+              console.log('Agent tokens:', ev.usage);
+            }
+          }
+        } catch(e) {}
+      }
+    }
+  } catch (error) {
+    appendMessage('system', '[Agent Error] ' + error.message + '\n请确认 Agent 后端已启动 (python server.py)');
+  } finally {
+    setAgentStatus('idle');
+    state.streaming = false;
+    sendBtn.disabled = false;
+    chatLoading.classList.add('hidden');
+    chatInput.focus();
+    scrollToBottom();
+  }
+}
+
 // Agent 状态控制
 function setAgentStatus(status){var dot=document.querySelector('.agent-dot');var txt=document.getElementById('agent-status-text');if(status==='working'){dot.classList.add('working');txt.textContent='工作中...'}else{dot.classList.remove('working');txt.textContent='就绪'}}
 
@@ -216,8 +300,15 @@ async function sendMessage() {
   appendMessage('user', message);
   scrollToBottom();
 
-  var apiUrl = API_CONFIG.apiUrl || 'https://api.deepseek.com/v1/chat/completions';
+  var isAgent = API_CONFIG.isAgent === true;
+  var apiUrl = API_CONFIG.apiUrl || (isAgent ? '/api/v1/chat/stream' : 'https://api.deepseek.com/v1/chat/completions');
   var model = API_CONFIG.model || 'deepseek-v4-pro';
+
+  // Agent模式：调用 Claude Agent SDK 后端
+  if (isAgent) {
+    await sendViaAgentAPI(message, apiUrl);
+    return;
+  }
 
   // System Prompt — 广告AI策略助手 (含客户数据)
   var systemPrompt = '你是抖音集团广告AI策略助手，服务于华东区广告策略团队。\n\n'+

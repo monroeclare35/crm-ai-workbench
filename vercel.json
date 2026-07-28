@@ -3,5 +3,11 @@
   "installCommand": null,
   "buildCommand": null,
   "outputDirectory": "frontend",
-  "cleanUrls": true
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://crm-ai-agent.onrender.com/api/:path*"
+    }
+  ]
 }
