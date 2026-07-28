@@ -1,15 +1,5 @@
 services:
   - type: web
     name: crm-ai-agent
-    env: python
-    buildCommand: pip install claude-agent-sdk fastapi uvicorn
-    startCommand: python server.py
-    envVars:
-      - key: ANTHROPIC_BASE_URL
-        value: https://api.deepseek.com/anthropic
-      - key: ANTHROPIC_AUTH_TOKEN
-        value: sk-530763cc55cc4320b16089a9e9730a72
-      - key: ANTHROPIC_MODEL
-        value: deepseek-v4-pro
-      - key: PYTHONIOENCODING
-        value: utf-8
+    env: docker
+    dockerfilePath: ./Dockerfile.render
