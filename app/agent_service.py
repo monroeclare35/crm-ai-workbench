@@ -23,7 +23,7 @@ from typing import AsyncIterator
 
 from claude_agent_sdk import (
     query, ClaudeAgentOptions, ResultMessage,
-    StreamMessage, ToolUseMessage,
+    StreamEvent,
     hook, HookEvent, HookMatcher,
 )
 

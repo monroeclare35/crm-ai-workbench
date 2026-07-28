@@ -1,38 +1,25 @@
-# CRM AI 工作台 Docker 部署
+FROM node:22-slim
 
-FROM python:3.12-slim
+# Python
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-pip python3-venv curl && rm -rf /var/lib/apt/lists/*
+
+# Claude Code CLI — SDK 的引擎
+RUN npm install -g @anthropic-ai/claude-code --unsafe-perm
+
+# Python deps
+RUN pip3 install --break-system-packages --no-cache-dir \
+    claude-agent-sdk fastapi uvicorn
 
 WORKDIR /app
+COPY server.py .
 
-# 系统依赖
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    git \
-    nodejs \
-    npm \
-    && rm -rf /var/lib/apt/lists/*
+ENV ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
+ENV ANTHROPIC_AUTH_TOKEN=sk-530763cc55cc4320b16089a9e9730a72
+ENV ANTHROPIC_API_KEY=sk-530763cc55cc4320b16089a9e9730a72
+ENV ANTHROPIC_MODEL=deepseek-v4-pro
+ENV PYTHONIOENCODING=utf-8
+ENV PORT=10000
 
-# Python 依赖
-COPY pyproject.toml .
-RUN pip install --no-cache-dir -e ".[dev]"
-
-# 应用代码
-COPY app/ ./app/
-COPY skills/ ./skills/
-COPY scripts/ ./scripts/
-COPY .mcp.json .
-
-# 前端
-COPY frontend/ ./frontend/
-
-# 创建非 root 用户
-RUN useradd -m -u 1000 agent && chown -R agent:agent /app
-USER agent
-
-# 健康检查
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
-
-EXPOSE 8000
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+EXPOSE 10000
+CMD ["python3", "server.py"]
