@@ -1,5 +1,5 @@
 services:
   - type: web
-    name: crm-ai-agent
+    name: crm-ai-workbench
     env: docker
     dockerfilePath: ./Dockerfile.render

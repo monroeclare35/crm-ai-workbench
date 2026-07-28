@@ -1,13 +1,18 @@
-FROM node:20-slim
+FROM node:22-slim
 
-# Python
-RUN apt-get update && apt-get install -y python3 python3-pip python3-venv && rm -rf /var/lib/apt/lists/*
+# Python 3
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-pip python3-venv curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Claude Code CLI (SDK需要)
-RUN npm install -g @anthropic-ai/claude-code
+# Claude Code CLI — SDK的引擎
+RUN npm install -g @anthropic-ai/claude-code 2>&1 || \
+    (echo "npm install failed, trying npx..." && \
+     npx --yes @anthropic-ai/claude-code --version 2>&1 || true)
 
 # Python deps
-RUN pip3 install --break-system-packages claude-agent-sdk fastapi uvicorn
+RUN pip3 install --break-system-packages --no-cache-dir \
+    claude-agent-sdk fastapi uvicorn
 
 WORKDIR /app
 COPY server.py .
@@ -16,6 +21,7 @@ ENV ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
 ENV ANTHROPIC_AUTH_TOKEN=sk-530763cc55cc4320b16089a9e9730a72
 ENV ANTHROPIC_MODEL=deepseek-v4-pro
 ENV PYTHONIOENCODING=utf-8
+ENV PORT=10000
 
 EXPOSE 10000
 CMD ["python3", "server.py"]
