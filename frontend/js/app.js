@@ -198,6 +198,7 @@ async function sendViaAgentAPI(message, apiUrl) {
     var fullContent = '';
     var traceSteps=document.getElementById('trace-steps');
     var firstEvent=true;
+    var thinkingEl=null, thinkingText='';  // 累积思考文本
 
     while (true) {
       var result = await reader.read();
@@ -216,15 +217,24 @@ async function sendViaAgentAPI(message, apiUrl) {
           var ev = JSON.parse(data);
           if (ev.type === 'agent_step') {
             if (firstEvent){traceSteps.innerHTML='';firstEvent=false}
-            var icon='',cls='',body='';
-            if (ev.step==='thinking'){icon='&#x1F9E0;';cls='think';body='Agent 思考分析中...'}
-            else if (ev.step==='thinking_delta'){icon='&#x1F4AD;';cls='think';body='思考: '+(ev.text||'').substring(0,80)}
-            else if (ev.step==='tool_call'){icon='&#x1F527;';cls='tool';body='调用工具: <strong>'+ev.name+'</strong>'}
-            else if (ev.step==='block_done'){icon='';cls='done';body=''}
-            if (body){
-              var stepEl=document.createElement('div');stepEl.className='trace-step '+cls;
-              stepEl.innerHTML='<span class="step-icon">'+icon+'</span><span class="step-body">'+body+'</span>';
-              traceSteps.appendChild(stepEl);traceSteps.scrollTop=traceSteps.scrollHeight;
+            if (ev.step==='thinking'){
+              // 新一轮思考开始 — 创建一条累积式思考行
+              thinkingEl=document.createElement('div');thinkingEl.className='trace-step think';
+              thinkingText='';
+              thinkingEl.innerHTML='<span class="step-icon">&#x1F9E0;</span><span class="step-body">Agent 思考中...</span>';
+              traceSteps.appendChild(thinkingEl);traceSteps.scrollTop=traceSteps.scrollHeight;
+            } else if (ev.step==='thinking_delta'){
+              // 累积思考文本，更新同一条
+              thinkingText+=(ev.text||'');
+              if (thinkingEl&&thinkingText.length<200){
+                thinkingEl.querySelector('.step-body').textContent='分析: '+thinkingText;
+                traceSteps.scrollTop=traceSteps.scrollHeight;
+              }
+            } else if (ev.step==='tool_call'){
+              // 工具调用 — 独立一行
+              var tel=document.createElement('div');tel.className='trace-step tool';
+              tel.innerHTML='<span class="step-icon">&#x1F527;</span><span class="step-body">调用: <strong>'+ev.name+'</strong></span>';
+              traceSteps.appendChild(tel);traceSteps.scrollTop=traceSteps.scrollHeight;
             }
           } else if (ev.type === 'text_delta') {
             if (firstEvent){traceSteps.innerHTML='';firstEvent=false}
