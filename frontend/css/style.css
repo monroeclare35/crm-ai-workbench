@@ -129,23 +129,41 @@ body {
 .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
 .select-sm { padding: 6px 10px; border-radius: var(--radius); border: 1px solid var(--gray-300); font-size: 13px; background: white; }
 
-/* --- Dashboard --- */
-.dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.dashboard-header h2 { font-size: 20px; }
-.dashboard-filters { display: flex; gap: 8px; }
-.dashboard-filters select { padding: 6px 12px; border-radius: var(--radius); border: 1px solid var(--gray-300); font-size: 13px; }
-.dashboard-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-.stat-card { background: white; border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
-.stat-label { font-size: 12px; color: var(--gray-500); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
-.stat-value { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
-.stat-change { font-size: 13px; }
-.stat-change.up { color: var(--success); }
-.stat-change.down { color: var(--danger); }
-.stat-card.warning { border-left: 3px solid var(--warning); }
-.dashboard-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.chart-panel { background: white; border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
-.chart-panel h3 { font-size: 14px; color: var(--gray-700); margin-bottom: 12px; }
-.chart-placeholder { height: 240px; display: flex; align-items: center; justify-content: center; color: var(--gray-300); background: var(--gray-50); border-radius: var(--radius); font-size: 14px; }
+/* --- Dashboard v2 — Production Grade --- */
+.db-topbar{padding:20px 28px 0}
+.db-title-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.db-title-row h2{font-size:20px;font-weight:700}
+.db-updated{font-size:12px;color:var(--gray-500)}
+.db-filters{display:flex;gap:4px;margin-left:auto}
+.db-filter{font-size:12px;padding:5px 12px;border-radius:14px;border:1px solid var(--gray-200);background:white;cursor:pointer;transition:all .15s}
+.db-filter:hover{border-color:var(--gray-500)}
+.db-filter.active{background:var(--text);color:#fff;border-color:var(--text)}
+.db-filter select{appearance:none;border:none;padding-right:6px;cursor:pointer}
+.db-kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;padding:16px 28px}
+.db-kpi{background:white;border-radius:10px;padding:16px 18px;box-shadow:var(--shadow-sm);border:1px solid var(--border);display:flex;flex-direction:column}
+.db-kpi.alert{border-left:3px solid var(--warning);background:var(--warning-bg)}
+.kpi-label{font-size:11.5px;color:var(--text3);margin-bottom:4px;font-weight:500}
+.kpi-val{font-size:26px;font-weight:700;letter-spacing:-0.5px}
+.kpi-sub{font-size:11.5px;margin-top:2px}
+.kpi-sub.up{color:var(--success)}.kpi-sub.down{color:var(--danger)}
+.db-chart-row{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:14px;padding:0 28px;margin-bottom:14px}
+.db-chart-row:last-child{grid-template-columns:1fr 1fr}
+.db-card{background:white;border-radius:10px;padding:18px;box-shadow:var(--shadow-sm);border:1px solid var(--border);overflow:hidden}
+.db-card.wide{grid-column:span 1}
+.db-card-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.db-card-hd h3{font-size:13px;font-weight:600}
+.db-card-hd span{font-size:11px;color:var(--text3);font-weight:400}
+.db-card-bd{overflow:auto}
+.db-card-bd svg{width:100%}
+.db-mini-table{width:100%;font-size:12px;border-collapse:collapse}
+.db-mini-table th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--text3);padding:6px 10px;border-bottom:2px solid var(--border);font-weight:600}
+.db-mini-table td{padding:6px 10px;border-bottom:1px solid var(--border)}
+.db-mini-table tr:hover td{background:var(--brand-light)}
+.db-badge{font-size:10.5px;padding:2px 7px;border-radius:10px;font-weight:600}
+.db-badge.danger{background:var(--danger-bg);color:var(--danger)}
+.db-badge.warn{background:var(--warning-bg);color:var(--warning)}
+
+@media(max-width:960px){.db-kpi-row{grid-template-columns:repeat(3,1fr)}.db-chart-row{grid-template-columns:1fr}}
 
 /* --- Report Center --- */
 .report-list { display: flex; flex-direction: column; gap: 8px; }

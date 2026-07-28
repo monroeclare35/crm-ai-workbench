@@ -122,6 +122,7 @@ function switchView(view) {
   const viewEl = document.getElementById(`view-${view}`);
   if (viewEl) viewEl.classList.add('active');
 
+  if (view === 'dashboard') renderDashboard();
   if (view === 'customers') renderCustomerCards();
   if (view === 'knowledge') renderKnowledgeResults('');
 }
@@ -419,12 +420,122 @@ document.querySelectorAll('.knowledge-categories .tag').forEach(tag => {
 });
 
 // ============================================================
+// 数据看板 — 生产级模拟数据 + SVG 图表
+// ============================================================
+
+var DB={period:'7d',region:'华东区'};
+
+// 生成真实感数据
+function genDbData(){
+  var now=new Date(); var days=DB.period==='30d'?30:(DB.period==='month'?30:7);
+  var trend=[], base=DB.region==='华东区'?128:(DB.region==='华北区'?96:DB.region==='华南区'?73:310);
+  var roiBase=DB.region==='华东区'?2.82:2.55, total=0;
+  for(var i=days;i>=1;i--){
+    var d=new Date(now); d.setDate(d.getDate()-i+1);
+    var dow=d.getDay(), isWeekend=(dow===0||dow===6);
+    var seasonal=1+Math.sin(i/days*Math.PI)*0.08;
+    var weekend=isWeekend?0.82:1;
+    var noise=0.92+Math.random()*0.16;
+    var spike=(i===Math.floor(days*0.4)||i===Math.floor(days*0.75))?1.22:1;
+    var val=Math.round(base*seasonal*weekend*noise*spike);
+    total+=val; var mo=d.getMonth()+1,dt=d.getDate();
+    trend.push({date:mo+'/'+dt,value:val,roi:Math.round((roiBase*(0.88+Math.random()*0.24))*100)/100});
+  }
+  var prevTotal=Math.round(total*(0.88+Math.random()*0.08));
+  var wowPct=Math.round((total-prevTotal)/prevTotal*1000)/10;
+  var ctrAvg=Math.round((2.1+Math.random()*0.9)*10)/10;
+  var activeCount=DB.region==='全部区域'?187:(DB.region==='华东区'?62:DB.region==='华北区'?54:48);
+  var anomalyCount=DB.region==='全部区域'?12:(DB.region==='华东区'?4:3);
+
+  // 行业数据
+  var industries=[{n:'电商',v:38,c:'#2563EB'},{n:'游戏',v:24,c:'#7C3AED'},{n:'教育',v:14,c:'#059669'},{n:'AI/科技',v:12,c:'#F59E0B'},{n:'本地生活',v:8,c:'#F97316'},{n:'金融',v:4,c:'#6B7280'}];
+  // 产品线
+  var products=[{n:'千川',v:42,c:'#2563EB'},{n:'引擎',v:31,c:'#7C3AED'},{n:'搜索',v:16,c:'#059669'},{n:'穿山甲',v:11,c:'#F59E0B'}];
+  // TOP10
+  var top10=[],names=['上海美妆科技','深圳鹏程电商','北京未来科技','杭州鲸灵网络','成都星辉教育','广州极速游戏','苏州天工AI','武汉乐活电商','南京云帆科技','西安数字引擎'];
+  for(var j=0;j<10;j++)top10.push({name:names[j],cost:Math.round((total*0.12-j*total*0.007)*(0.8+Math.random()*0.4)),roi:Math.round((1.8+Math.random()*3.2)*100)/100});
+  top10.sort(function(a,b){return b.cost-a.cost});
+  // 异常
+  var anomalies=[{name:'杭州鲸灵网络',reason:'ROI连续7天下降42%',lvl:'danger'},{name:'成都星辉教育',reason:'消耗骤降68%，疑似余额不足',lvl:'danger'},{name:'苏州天工AI',reason:'CTR低于行业均值35%',lvl:'warn'},{name:'武汉乐活电商',reason:'素材超2周未更新',lvl:'warn'}];
+  if(DB.region==='全部区域')anomalies.push({name:'广州极速游戏',reason:'CPA超目标120%',lvl:'danger'});
+
+  return{total:total,wowPct:wowPct,roiAvg:Math.round((roiBase*(0.95+Math.random()*0.1))*100)/100,ctrAvg:ctrAvg,activeCount:activeCount,anomalyCount:anomalyCount,trend:trend,industries:industries,products:products,top10:top10,anomalies:anomalies};
+}
+
+// SVG 趋势图
+function renderTrendSVG(data){
+  var w=640,h=240,padL=50,padR=20,padT=20,padB=30;
+  var maxV=Math.max.apply(null,data.map(function(d){return d.value}));
+  var xStep=(w-padL-padR)/(data.length-1);
+  // 面积
+  var pts='',area='';
+  for(var i=0;i<data.length;i++){
+    var x=padL+i*xStep, y=h-padB-(data[i].value/maxV)*(h-padT-padB);
+    pts+=(i?' ':'')+x+','+y;
+  }
+  area=pts+' '+(padL+(data.length-1)*xStep)+','+(h-padB)+' '+padL+','+(h-padB);
+  // Y轴标签
+  var yLabels='';
+  for(var yi=0;yi<=4;yi++){var yv=Math.round(maxV*yi/4);yLabels+='<text x="'+(padL-6)+'" y="'+(h-padB-(h-padT-padB)*yi/4+4)+'" text-anchor="end" font-size="10" fill="#949CAB">'+(yv>999?Math.round(yv/100)/10+'万':yv)+'</text>';}
+  // 周末标注
+  var weekends='';
+  for(var wi=0;wi<data.length;wi++){var dd=data[wi].date;if(dd.indexOf('/')>-1){var parts=dd.split('/');var dt=parseInt(parts[1]);var d2=new Date(2026,parseInt(parts[0])-1,dt);if(d2.getDay()===0||d2.getDay()===6)weekends+='<rect x="'+(padL+wi*xStep-xStep/2)+'" y="'+padT+'" width="'+(xStep)+'" height="'+(h-padT-padB)+'" fill="#F1F3F7" opacity="0.5"/>';}}
+  return '<svg viewBox="0 0 '+w+' '+h+'" width="100%" height="240"><defs><linearGradient id="tga" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2563EB" stop-opacity="0.12"/><stop offset="100%" stop-color="#2563EB" stop-opacity="0"/></linearGradient></defs>'+weekends+yLabels+'<polygon points="'+area+'" fill="url(#tga)"/><polyline points="'+pts+'" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+data.map(function(d,i){return '<circle cx="'+(padL+i*xStep)+'" cy="'+(h-padB-(d.value/maxV)*(h-padT-padB))+'" r="'+(i===data.length-1?'3.5':'0')+'" fill="#2563EB"/>'}).join('')+'</svg>';
+}
+
+// 行业柱状图
+function renderIndustrySVG(data){
+  var w=280,h=200,padL=10,padT=10,padB=20,bh=24,gap=8; var maxV=data[0].v;
+  return '<svg viewBox="0 0 '+w+' '+h+'" width="100%" height="200">'+data.map(function(d,i){var bw=(d.v/maxV)*(w-padL-60);return '<rect x="'+padL+'" y="'+(padT+i*(bh+gap))+'" width="'+bw+'" height="'+bh+'" rx="5" fill="'+d.c+'" opacity="0.85"/><text x="'+(padL+bw+6)+'" y="'+(padT+i*(bh+gap)+bh-8)+'" font-size="11" fill="#1A1D26" font-weight="500">'+d.n+' '+d.v+'%</text>'}).join('')+'</svg>';
+}
+
+// 产品线饼图
+function renderProductSVG(data){
+  var w=280,h=200,cx=120,cy=105,r=70; var total=data.reduce(function(s,d){return s+d.v},0); var ang=-Math.PI/2,slices='';
+  data.forEach(function(d){var sw=d.v/total*2*Math.PI, end=ang+sw;var x1=cx+r*Math.cos(ang),y1=cy+r*Math.sin(ang),x2=cx+r*Math.cos(end),y2=cy+r*Math.sin(end);var large=sw>Math.PI?1:0;slices+='<path d="M '+cx+' '+cy+' L '+x1+' '+y1+' A '+r+' '+r+' 0 '+large+' 1 '+x2+' '+y2+' Z" fill="'+d.c+'" opacity="0.85"/>';ang=end;});
+  return '<svg viewBox="0 0 '+w+' '+h+'" width="100%" height="200">'+slices+'<text x="'+cx+'" y="'+cy+'" text-anchor="middle" font-size="14" font-weight="700">'+total+'%</text></svg><div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:4px;font-size:11px">'+data.map(function(d){return '<span style="color:'+d.c+'">● '+d.n+' '+d.v+'%</span>'}).join('')+'</div>';
+}
+
+function renderDashboard(){
+  var data=genDbData();
+  document.getElementById('db-time').textContent=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  // KPI
+  document.getElementById('kpi-cost').textContent='¥'+(data.total>9999?Math.round(data.total/10000)+'万':data.total.toLocaleString());
+  document.getElementById('kpi-cost-chg').textContent=(data.wowPct>=0?'↑':'↓')+' '+Math.abs(data.wowPct)+'% 环比';
+  document.getElementById('kpi-cost-chg').className='kpi-sub '+(data.wowPct>=0?'up':'down');
+  document.getElementById('kpi-wow').textContent=(data.wowPct>=0?'+':'')+data.wowPct+'%';
+  document.getElementById('kpi-roi').textContent=data.roiAvg;
+  document.getElementById('kpi-roi-chg').textContent=(data.wowPct>=0?'↑':'↓')+' '+Math.abs(Math.round(data.wowPct*0.6*10)/10)+'%';
+  document.getElementById('kpi-roi-chg').className='kpi-sub '+(data.wowPct>=0?'up':'down');
+  document.getElementById('kpi-active').textContent=data.activeCount;
+  document.getElementById('kpi-active-chg').textContent='+'+Math.round(data.activeCount*0.03)+' 本周新增';
+  document.getElementById('kpi-active-chg').className='kpi-sub up';
+  document.getElementById('kpi-ctr').textContent=data.ctrAvg+'%';
+  document.getElementById('kpi-ctr-chg').textContent='行业均值 2.35%';
+  document.getElementById('kpi-alert').textContent=data.anomalyCount;
+  // Charts
+  var trendEl=document.getElementById('chart-trend'); if(trendEl) trendEl.innerHTML=renderTrendSVG(data.trend);
+  var indEl=document.getElementById('chart-industry'); if(indEl) indEl.innerHTML=renderIndustrySVG(data.industries);
+  var prodEl=document.getElementById('chart-product'); if(prodEl) prodEl.innerHTML=renderProductSVG(data.products);
+  // TOP10 table
+  var topEl=document.getElementById('table-top10');
+  if(topEl) topEl.innerHTML='<table class="db-mini-table"><thead><tr><th>#</th><th>账户</th><th>消耗</th><th>ROI</th></tr></thead><tbody>'+data.top10.map(function(d,i){return'<tr><td>'+(i+1)+'</td><td style="font-weight:500">'+d.name+'</td><td>¥'+(d.cost>9999?Math.round(d.cost/10000)+'万':d.cost.toLocaleString())+'</td><td style="font-weight:600">'+d.roi+'</td></tr>'}).join('')+'</tbody></table>';
+  // Anomaly table
+  var anomEl=document.getElementById('table-anomaly');
+  if(anomEl) anomEl.innerHTML='<table class="db-mini-table"><tbody>'+data.anomalies.map(function(d){return'<tr><td><span class="db-badge '+d.lvl+'">'+d.lvl+'</span></td><td style="font-weight:500">'+d.name+'</td><td style="font-size:11px;color:var(--text2)">'+d.reason+'</td></tr>'}).join('')+'</tbody></table>';
+}
+
+function switchDbPeriod(p,el){DB.period=p;document.querySelectorAll('.db-filter').forEach(function(f){f.classList.remove('active')});el.classList.add('active');renderDashboard()}
+function switchDbRegion(r){DB.region=r;renderDashboard()}
+
+// ============================================================
 // 初始化
 // ============================================================
 
 function init() {
   initNavigation();
   initChat();
+  renderDashboard();
   renderCustomerCards();
 }
 

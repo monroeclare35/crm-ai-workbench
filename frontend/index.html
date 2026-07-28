@@ -130,43 +130,54 @@
 
   <!-- 数据看板视图 -->
   <section id="view-dashboard" class="view">
-    <div class="dashboard-header">
-      <h2>数据看板</h2>
-      <div class="dashboard-filters">
-        <select><option>华东区</option><option>华北区</option><option>华南区</option></select>
-        <select><option>近7天</option><option>近30天</option><option>本月</option></select>
+    <div class="db-topbar">
+      <div class="db-title-row">
+        <h2>数据看板</h2>
+        <span class="db-updated">更新于 <span id="db-time"></span></span>
+        <div class="db-filters">
+          <button class="db-filter active" onclick="switchDbPeriod('7d',this)">近7天</button>
+          <button class="db-filter" onclick="switchDbPeriod('30d',this)">近30天</button>
+          <button class="db-filter" onclick="switchDbPeriod('month',this)">本月</button>
+          <select class="db-filter" onchange="switchDbRegion(this.value)"><option>华东区</option><option>华北区</option><option>华南区</option><option>全部区域</option></select>
+        </div>
       </div>
     </div>
-    <div class="dashboard-grid">
-      <div class="stat-card">
-        <div class="stat-label">总消耗</div>
-        <div class="stat-value">¥1,285万</div>
-        <div class="stat-change up">↑ 12.5%</div>
+
+    <!-- 6 核心指标 -->
+    <div class="db-kpi-row">
+      <div class="db-kpi"><span class="kpi-label">总消耗</span><span class="kpi-val" id="kpi-cost">--</span><span class="kpi-sub up" id="kpi-cost-chg"></span></div>
+      <div class="db-kpi"><span class="kpi-label">环比变化</span><span class="kpi-val" id="kpi-wow">--</span><span class="kpi-sub"></span></div>
+      <div class="db-kpi"><span class="kpi-label">平均 ROI</span><span class="kpi-val" id="kpi-roi">--</span><span class="kpi-sub" id="kpi-roi-chg"></span></div>
+      <div class="db-kpi"><span class="kpi-label">活跃账户</span><span class="kpi-val" id="kpi-active">--</span><span class="kpi-sub" id="kpi-active-chg"></span></div>
+      <div class="db-kpi"><span class="kpi-label">平均 CTR</span><span class="kpi-val" id="kpi-ctr">--</span><span class="kpi-sub" id="kpi-ctr-chg"></span></div>
+      <div class="db-kpi alert"><span class="kpi-label">⚠ 异常告警</span><span class="kpi-val" id="kpi-alert">--</span><span class="kpi-sub" style="color:#DC2626"></span></div>
+    </div>
+
+    <!-- 趋势图 + 行业分布 -->
+    <div class="db-chart-row">
+      <div class="db-card wide">
+        <div class="db-card-hd"><h3>消耗趋势 <span>近30天 · 万元</span></h3></div>
+        <div class="db-card-bd" id="chart-trend"></div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">活跃客户</div>
-        <div class="stat-value">47</div>
-        <div class="stat-change up">↑ 3</div>
+      <div class="db-card">
+        <div class="db-card-hd"><h3>行业消耗占比</h3></div>
+        <div class="db-card-bd" id="chart-industry"></div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">平均ROI</div>
-        <div class="stat-value">2.8</div>
-        <div class="stat-change down">↓ 0.3</div>
-      </div>
-      <div class="stat-card warning">
-        <div class="stat-label">⚠️ 异常客户</div>
-        <div class="stat-value">5</div>
-        <div class="stat-change">需关注</div>
+      <div class="db-card">
+        <div class="db-card-hd"><h3>产品线分布</h3></div>
+        <div class="db-card-bd" id="chart-product"></div>
       </div>
     </div>
-    <div class="dashboard-charts">
-      <div class="chart-panel" id="trend-chart">
-        <h3>消耗趋势</h3>
-        <div class="chart-placeholder">📈 图表区域（生产环境接入 ECharts）</div>
+
+    <!-- TOP账户 + 异常列表 -->
+    <div class="db-chart-row">
+      <div class="db-card">
+        <div class="db-card-hd"><h3>消耗 TOP 10 账户</h3></div>
+        <div class="db-card-bd" id="table-top10"></div>
       </div>
-      <div class="chart-panel" id="health-chart">
-        <h3>客户健康度分布</h3>
-        <div class="chart-placeholder">🥧 图表区域</div>
+      <div class="db-card">
+        <div class="db-card-hd"><h3>⚠️ 异常账户</h3></div>
+        <div class="db-card-bd" id="table-anomaly"></div>
       </div>
     </div>
   </section>
