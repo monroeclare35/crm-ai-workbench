@@ -8,7 +8,7 @@
 // ============================================================
 // 设置面板 — API Key / Base URL / Model
 // ============================================================
-var API_CONFIG = { baseUrl: '', apiKey: '', model: '' };
+var API_CONFIG = { apiUrl: '/api/v1/chat/stream', apiKey: '', model: 'agent-sdk', isAgent: true };
 
 // 预设配置 — API端点
 var PRESETS = {
@@ -21,7 +21,7 @@ var PRESETS = {
 function loadSettings(){
   try{
     var s=JSON.parse(localStorage.getItem('crm_ai_settings'));
-    if(s){ API_CONFIG.apiUrl=s.apiUrl||''; API_CONFIG.apiKey=s.apiKey||''; API_CONFIG.model=s.model||''; }
+    if(s){ API_CONFIG.apiUrl=s.apiUrl||'/api/v1/chat/stream'; API_CONFIG.apiKey=s.apiKey||''; API_CONFIG.model=s.model||'agent-sdk'; API_CONFIG.isAgent=(s.isAgent!==undefined?s.isAgent:true); }
   }catch(e){}
 }
 

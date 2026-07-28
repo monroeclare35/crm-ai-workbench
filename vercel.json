@@ -7,7 +7,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://crm-ai-agent.onrender.com/api/:path*"
+      "destination": "https://crm-ai-workbench.onrender.com/api/:path*"
     }
   ]
 }
