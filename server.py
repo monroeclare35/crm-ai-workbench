@@ -138,6 +138,12 @@ async def chat_stream(req:ChatReq):
     return StreamingResponse(gen(),media_type="text/event-stream",
         headers={"Cache-Control":"no-cache","X-Accel-Buffering":"no"})
 
+@app.get("/api/v1/debug/files")
+async def list_files():
+    import glob
+    files=glob.glob("/app/**/*",recursive=True)
+    return {"files":files[:50]}
+
 @app.get("/api/v1/debug/claude-test")
 async def claude_test():
     """直接跑claude CLI看stderr"""
