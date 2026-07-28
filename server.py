@@ -5,9 +5,10 @@ CRM AI 工作台 — FastAPI 后端服务
 """
 
 import os, sys, json, asyncio
-os.environ["ANTHROPIC_BASE_URL"]="https://api.deepseek.com/anthropic"
-os.environ["ANTHROPIC_AUTH_TOKEN"]="sk-530763cc55cc4320b16089a9e9730a72"
-os.environ["ANTHROPIC_MODEL"]="deepseek-v4-pro"
+os.environ.setdefault("ANTHROPIC_BASE_URL","https://api.deepseek.com/anthropic")
+os.environ.setdefault("ANTHROPIC_AUTH_TOKEN","sk-530763cc55cc4320b16089a9e9730a72")
+os.environ.setdefault("ANTHROPIC_API_KEY","sk-530763cc55cc4320b16089a9e9730a72")
+os.environ.setdefault("ANTHROPIC_MODEL","deepseek-v4-pro")
 
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
