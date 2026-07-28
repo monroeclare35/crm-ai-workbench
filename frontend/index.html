@@ -4,236 +4,178 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CRM AI 智能工作台</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-
-<!-- 导航逻辑内嵌：零依赖，JS加载失败也能用 -->
-<script>
-window.switchView=function(v){
-  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active')});
-  var nav=document.querySelector('.nav-item[data-view="'+v+'"]');
-  if(nav) nav.classList.add('active');
-  document.querySelectorAll('.view').forEach(function(vw){vw.style.display='none'});
-  var target=document.getElementById('view-'+v);
-  if(target) target.style.display='flex';
-};
-</script>
-
 <!-- ===== 侧边栏 ===== -->
 <aside id="sidebar">
-  <div class="sidebar-top">
-    <div class="logo">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-      <div>
-        <span class="logo-text">CRM AI</span>
-        <span class="logo-sub">智能工作台</span>
-      </div>
-    </div>
-
-    <nav class="nav-group">
-      <div class="nav-label">工作区</div>
-      <a href="javascript:void(0)" class="nav-item active" onclick="switchView('chat')" data-view="chat">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        <span>智能对话</span>
-        <span class="nav-badge">AI</span>
-      </a>
-      <a href="javascript:void(0)" class="nav-item" onclick="switchView('dashboard')" data-view="dashboard">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        <span>数据看板</span>
-      </a>
-      <a href="javascript:void(0)" class="nav-item" onclick="switchView('customers')" data-view="customers">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        <span>客户管理</span>
-      </a>
-      <a href="javascript:void(0)" class="nav-item" onclick="switchView('reports')" data-view="reports">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        <span>报告中心</span>
-      </a>
-      <a href="javascript:void(0)" class="nav-item" onclick="switchView('knowledge')" data-view="knowledge">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <span>知识库</span>
-      </a>
-    </nav>
-
-    <nav class="nav-group">
-      <div class="nav-label">工具</div>
-      <a href="#" class="nav-item" data-view="settings" style="opacity:0.5">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        <span>设置</span>
-      </a>
-    </nav>
+  <div class="sidebar-header">
+    <h1>🚀 CRM AI</h1>
+    <span class="version">v0.3.0</span>
   </div>
 
-  <div class="sidebar-bottom">
-    <div class="user-card">
-      <div class="user-avatar">张</div>
-      <div class="user-meta">
+  <nav class="sidebar-nav">
+    <a href="#" class="nav-item active" data-view="chat">
+      <span class="nav-icon">💬</span> 智能对话
+    </a>
+    <a href="#" class="nav-item" data-view="dashboard">
+      <span class="nav-icon">📊</span> 数据看板
+    </a>
+    <a href="#" class="nav-item" data-view="reports">
+      <span class="nav-icon">📋</span> 报告中心
+    </a>
+    <a href="#" class="nav-item" data-view="customers">
+      <span class="nav-icon">👥</span> 客户管理
+    </a>
+    <a href="#" class="nav-item" data-view="knowledge">
+      <span class="nav-icon">📚</span> 知识库
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-info">
+      <div class="avatar">张</div>
+      <div class="user-details">
         <span class="user-name">张三</span>
         <span class="user-role">销售 · 华东区</span>
       </div>
-      <div class="status-dot online"></div>
     </div>
+    <button id="settings-btn" class="icon-btn" title="设置">⚙️</button>
   </div>
 </aside>
 
 <!-- ===== 主内容区 ===== -->
 <main id="main-content">
 
-  <!-- 智能对话 -->
+  <!-- 智能对话视图 -->
   <section id="view-chat" class="view active">
-    <div class="chat-layout">
-      <div class="chat-main">
-        <div class="chat-topbar">
-          <h2>智能对话</h2>
-          <div class="topbar-actions">
-            <select id="model-select" class="model-pill">
-              <option value="chat">DeepSeek V4 Pro</option>
-              <option value="analysis">Kimi K2.6 · 分析增强</option>
-              <option value="deep_research">Kimi K2.6 · 深度调研</option>
-            </select>
-            <button id="new-chat-btn" class="btn-ghost" title="新对话">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              新对话
-            </button>
+    <div class="chat-container">
+      <div class="chat-header">
+        <h2>智能对话</h2>
+        <div class="chat-actions">
+          <button id="new-chat-btn" class="btn btn-outline">+ 新对话</button>
+          <select id="model-select" class="select-sm">
+            <option value="chat">DeepSeek V3</option>
+            <option value="analysis">Kimi K2 (分析)</option>
+            <option value="deep_research">Kimi K2 (深度调研)</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="chat-messages" class="chat-messages">
+        <!-- 欢迎消息 -->
+        <div class="message system">
+          <div class="message-content">
+            <p>👋 你好！我是 CRM AI 助手。</p>
+            <p>我可以帮你：</p>
+            <ul>
+              <li>🔍 <strong>查询客户数据</strong> — "华东区教育行业消耗TOP10"</li>
+              <li>📊 <strong>分析投放效果</strong> — "分析XX客户的ROI变化趋势"</li>
+              <li>💡 <strong>策略建议</strong> — "XX客户消耗下降怎么办？"</li>
+              <li>📋 <strong>生成报告</strong> — "生成本周华东区运营周报"</li>
+              <li>🔬 <strong>深度调研</strong> — "教育行业2026广告趋势调研"</li>
+            </ul>
+            <p class="hint">试试输入你的问题 👇</p>
           </div>
         </div>
+      </div>
 
-        <div id="chat-messages" class="chat-messages">
-          <div class="welcome-screen">
-            <div class="welcome-icon">
-              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-            </div>
-            <h3>你好，张三</h3>
-            <p class="welcome-sub">我是你的 CRM AI 助手，可以帮你查询数据、分析客户、生成报告。</p>
-            <div class="quick-prompts">
-              <button class="prompt-chip" data-prompt="帮我看看我负责的客户近况，哪些需要重点关注？">
-                <span class="chip-icon">📊</span> 客户近况概览
-              </button>
-              <button class="prompt-chip" data-prompt="检测一下我负责的客户，有没有消耗异常或流失风险的？">
-                <span class="chip-icon">⚠️</span> 异常检测预警
-              </button>
-              <button class="prompt-chip" data-prompt="帮我生成今天的客户晨报，包括消耗趋势和待办建议">
-                <span class="chip-icon">📋</span> 生成今日晨报
-              </button>
-              <button class="prompt-chip" data-prompt="电商行业的巨量千川投放最佳实践是什么？">
-                <span class="chip-icon">📚</span> 广告知识检索
-              </button>
-              <button class="prompt-chip" data-prompt="帮我分析一下杭州鲸灵网络的ROI下降原因，给出优化建议">
-                <span class="chip-icon">💡</span> 客户策略分析
-              </button>
-              <button class="prompt-chip" data-prompt="做一个教育行业2026年广告投放趋势的深度调研">
-                <span class="chip-icon">🔬</span> 行业深度调研
-              </button>
-            </div>
-          </div>
+      <div id="chat-loading" class="chat-loading hidden">
+        <div class="typing-indicator">
+          <span></span><span></span><span></span>
+          <span class="loading-text">思考中...</span>
         </div>
+      </div>
 
-        <div id="chat-loading" class="chat-loading hidden">
-          <div class="thinking-bar">
-            <div class="thinking-dot"></div>
-            <div class="thinking-dot"></div>
-            <div class="thinking-dot"></div>
-          </div>
-          <span>思考中...</span>
+      <div class="chat-input-area">
+        <div class="quick-actions">
+          <button class="quick-btn" data-prompt="帮我看看我负责的客户近况">📊 客户近况</button>
+          <button class="quick-btn" data-prompt="哪些客户最近有异常？">⚠️ 异常检测</button>
+          <button class="quick-btn" data-prompt="帮我生成今天的客户晨报">📋 今日晨报</button>
+          <button class="quick-btn" data-prompt="教育行业的投放最佳实践是什么？">📚 查知识</button>
         </div>
-
-        <div class="chat-input-bar">
-          <div class="input-wrapper">
-            <textarea id="chat-input" placeholder="输入你的问题... (Enter 发送, Shift+Enter 换行)" rows="1"></textarea>
-            <button id="send-btn" class="btn-send" title="发送">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            </button>
-          </div>
-          <span class="input-hint">AI 生成内容仅供参考，请以实际数据为准</span>
+        <div class="input-row">
+          <textarea id="chat-input" placeholder="输入你的问题... (Enter 发送, Shift+Enter 换行)" rows="1"></textarea>
+          <button id="send-btn" class="btn btn-primary">发送</button>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- 数据看板 -->
+  <!-- 数据看板视图 -->
   <section id="view-dashboard" class="view">
-    <div class="page-header">
+    <div class="dashboard-header">
       <h2>数据看板</h2>
-      <div class="filter-pills">
-        <button class="pill active">近7天</button><button class="pill">近30天</button><button class="pill">本月</button><button class="pill">本季度</button>
-        <select class="pill select"><option>华东区</option><option>华北区</option><option>华南区</option></select>
+      <div class="dashboard-filters">
+        <select><option>华东区</option><option>华北区</option><option>华南区</option></select>
+        <select><option>近7天</option><option>近30天</option><option>本月</option></select>
       </div>
     </div>
-    <div class="stat-row">
+    <div class="dashboard-grid">
       <div class="stat-card">
-        <div class="stat-icon cost"></div>
-        <div class="stat-body"><span class="stat-label">总消耗</span><span class="stat-value">¥1,285万</span><span class="stat-sub up">↑ 12.5% 环比</span></div>
-        <div class="mini-spark" id="spark-cost"></div>
+        <div class="stat-label">总消耗</div>
+        <div class="stat-value">¥1,285万</div>
+        <div class="stat-change up">↑ 12.5%</div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon roi"></div>
-        <div class="stat-body"><span class="stat-label">平均 ROI</span><span class="stat-value">2.82</span><span class="stat-sub down">↓ 0.3 环比</span></div>
-        <div class="mini-spark" id="spark-roi"></div>
+        <div class="stat-label">活跃客户</div>
+        <div class="stat-value">47</div>
+        <div class="stat-change up">↑ 3</div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon active"></div>
-        <div class="stat-body"><span class="stat-label">活跃客户</span><span class="stat-value">47</span><span class="stat-sub up">↑ 3 本周新增</span></div>
-        <div class="mini-spark" id="spark-active"></div>
+        <div class="stat-label">平均ROI</div>
+        <div class="stat-value">2.8</div>
+        <div class="stat-change down">↓ 0.3</div>
       </div>
-      <div class="stat-card alert">
-        <div class="stat-icon danger"></div>
-        <div class="stat-body"><span class="stat-label">需关注客户</span><span class="stat-value">5</span><span class="stat-sub warn">2 流失风险 / 3 ROI下降</span></div>
+      <div class="stat-card warning">
+        <div class="stat-label">⚠️ 异常客户</div>
+        <div class="stat-value">5</div>
+        <div class="stat-change">需关注</div>
       </div>
     </div>
-    <div class="chart-grid">
-      <div class="chart-card wide">
-        <div class="chart-header"><h3>消耗趋势 <span class="chart-subtitle">近30天 · 单位：万元</span></h3></div>
-        <div class="chart-body" id="chart-trend"></div>
+    <div class="dashboard-charts">
+      <div class="chart-panel" id="trend-chart">
+        <h3>消耗趋势</h3>
+        <div class="chart-placeholder">📈 图表区域（生产环境接入 ECharts）</div>
       </div>
-      <div class="chart-card">
-        <div class="chart-header"><h3>客户健康度分布</h3></div>
-        <div class="chart-body" id="chart-health"></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-header"><h3>行业消耗占比</h3></div>
-        <div class="chart-body" id="chart-industry"></div>
+      <div class="chart-panel" id="health-chart">
+        <h3>客户健康度分布</h3>
+        <div class="chart-placeholder">🥧 图表区域</div>
       </div>
     </div>
   </section>
 
-  <!-- 客户管理 -->
-  <section id="view-customers" class="view">
-    <div class="page-header">
-      <h2>客户管理</h2>
-      <div class="filter-pills">
-        <button class="pill active">全部</button><button class="pill">电商</button><button class="pill">游戏</button><button class="pill">教育</button><button class="pill">AI/科技</button>
-      </div>
-    </div>
-    <div class="customer-table-wrap">
-      <table class="customer-table">
-        <thead><tr><th>客户名称</th><th>行业</th><th>区域</th><th>等级</th><th>近30天消耗</th><th>ROI</th><th>健康</th><th></th></tr></thead>
-        <tbody id="customer-tbody"></tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- 报告中心 -->
+  <!-- 报告中心视图 -->
   <section id="view-reports" class="view">
-    <div class="page-header"><h2>报告中心</h2></div>
-    <div class="report-grid" id="report-grid"></div>
+    <h2>报告中心</h2>
+    <div class="report-list">
+      <div class="report-item"><span>📋</span> 华东区周报_20260727.md <small>2小时前</small></div>
+      <div class="report-item"><span>📋</span> 上海美妆客户月报_202607.md <small>昨天</small></div>
+      <div class="report-item"><span>📋</span> 教育行业Q2分析报告.md <small>3天前</small></div>
+    </div>
   </section>
 
-  <!-- 知识库 -->
-  <section id="view-knowledge" class="view">
-    <div class="page-header"><h2>知识库</h2></div>
-    <div class="knowledge-layout">
-      <div class="knowledge-sidebar">
-        <div class="k-cat active">全部</div><div class="k-cat">投放政策</div><div class="k-cat">策略最佳实践</div><div class="k-cat">行业案例</div><div class="k-cat">产品文档</div><div class="k-cat">FAQ</div>
-      </div>
-      <div class="knowledge-main">
-        <div class="search-box"><input type="text" placeholder="搜索广告知识... 例如：oCPM出价策略、教育行业合规" id="knowledge-search-input"><button class="btn-primary">搜索</button></div>
-        <div id="knowledge-results"></div>
-      </div>
+  <!-- 客户管理视图 -->
+  <section id="view-customers" class="view">
+    <h2>客户管理</h2>
+    <div class="customer-grid" id="customer-grid">
+      <!-- JS 动态填充 -->
     </div>
+  </section>
+
+  <!-- 知识库视图 -->
+  <section id="view-knowledge" class="view">
+    <h2>知识库</h2>
+    <div class="knowledge-search">
+      <input type="text" placeholder="搜索广告知识..." id="knowledge-search-input">
+      <button class="btn btn-primary">搜索</button>
+    </div>
+    <div class="knowledge-categories">
+      <span class="tag active">全部</span><span class="tag">政策</span>
+      <span class="tag">策略</span><span class="tag">案例</span><span class="tag">产品</span>
+      <span class="tag">FAQ</span>
+    </div>
+    <div id="knowledge-results" class="knowledge-results"></div>
   </section>
 
 </main>
