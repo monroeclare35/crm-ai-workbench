@@ -106,9 +106,11 @@ async def chat_stream(req:ChatReq):
     async def gen():
         try:
             cli=shutil.which("claude") or shutil.which("node")
+            stderr_lines=[]
+            def capture_stderr(line): stderr_lines.append(line)
             opts=ClaudeAgentOptions(model="deepseek-v4-pro",system_prompt=SYS,mcp_servers={"crm":srv},
                 allowed_tools=["Bash","Write","mcp__crm__*"],permission_mode="bypassPermissions",max_turns=10,
-                cwd=os.getcwd(),cli_path=cli)
+                cwd=os.getcwd(),cli_path=cli,stderr=capture_stderr)
             async for msg in query(prompt=req.message,options=opts):
                 if isinstance(msg,StreamEvent):
                     try:
@@ -128,9 +130,21 @@ async def chat_stream(req:ChatReq):
                     if isinstance(u,dict):tk=u
                     yield f"data: {json.dumps({'type':'done','usage':tk},ensure_ascii=False)}\n\n"
         except Exception as e:
-            yield f"data: {json.dumps({'type':'error','content':str(e)},ensure_ascii=False)}\n\n"
+            err=str(e)
+            if stderr_lines: err+=" | stderr: "+" | ".join(stderr_lines[-5:])
+            yield f"data: {json.dumps({'type':'error','content':err},ensure_ascii=False)}\n\n"
     return StreamingResponse(gen(),media_type="text/event-stream",
         headers={"Cache-Control":"no-cache","X-Accel-Buffering":"no"})
+
+@app.get("/api/v1/debug/claude-test")
+async def claude_test():
+    """直接跑claude CLI看stderr"""
+    try:
+        r=subprocess.run(["claude","--version"],capture_output=True,text=True,timeout=10)
+        # 用echo测试stdin通信
+        r2=subprocess.run(["claude"],input='{"type":"init"}\n',capture_output=True,text=True,timeout=15)
+        return {"version":{"stdout":r.stdout.strip(),"stderr":r.stderr.strip(),"rc":r.returncode},"init_test":{"stdout":r2.stdout.strip()[:500],"stderr":r2.stderr.strip()[:500],"rc":r2.returncode}}
+    except Exception as e: return {"error":str(e)}
 
 @app.get("/api/v1/health")
 async def health():
