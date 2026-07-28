@@ -1,9 +1,93 @@
 /**
  * CRM AI 智能工作台 — 前端应用
  *
- * 功能：多视图切换、流式对话、数据看板、客户卡片、知识库搜索
+ * 功能：多视图切换、流式对话、数据看板、客户卡片、知识库搜索、API 设置
  * 架构：单页应用 (SPA)，通过 fetch + ReadableStream 与后端 SSE 接口通信
  */
+
+// ============================================================
+// 设置面板 — API Key / Base URL / Model
+// ============================================================
+var API_CONFIG = { baseUrl: '', apiKey: '', model: '' };
+
+// 预设配置
+var PRESETS = {
+  deepseek: { baseUrl: 'https://api.deepseek.com/anthropic', model: 'deepseek-v4-pro' },
+  kimi:     { baseUrl: 'https://api.moonshot.ai/anthropic',  model: 'kimi-k2.6' },
+  glm:      { baseUrl: 'https://open.bigmodel.cn/api/anthropic', model: 'glm-4.5' }
+};
+
+function loadSettings(){
+  try{
+    var s=JSON.parse(localStorage.getItem('crm_ai_settings'));
+    if(s){ API_CONFIG.baseUrl=s.baseUrl||''; API_CONFIG.apiKey=s.apiKey||''; API_CONFIG.model=s.model||''; }
+  }catch(e){}
+}
+
+function openSettings(){
+  document.getElementById('set-base-url').value=API_CONFIG.baseUrl;
+  document.getElementById('set-api-key').value=API_CONFIG.apiKey;
+  document.getElementById('set-model').value=API_CONFIG.model;
+  document.getElementById('settings-overlay').classList.remove('hidden');
+  document.getElementById('settings-msg').textContent='';
+}
+
+function closeSettings(e){
+  if(e&&e.target!==document.getElementById('settings-overlay'))return;
+  document.getElementById('settings-overlay').classList.add('hidden');
+}
+
+function applyPreset(name){
+  var p=PRESETS[name];
+  if(p){ document.getElementById('set-base-url').value=p.baseUrl; document.getElementById('set-model').value=p.model; }
+}
+
+function saveSettings(){
+  API_CONFIG.baseUrl=document.getElementById('set-base-url').value.trim();
+  API_CONFIG.apiKey=document.getElementById('set-api-key').value.trim();
+  API_CONFIG.model=document.getElementById('set-model').value.trim();
+  localStorage.setItem('crm_ai_settings',JSON.stringify(API_CONFIG));
+  document.getElementById('settings-msg').textContent='✓ 已保存 (下次对话生效)';
+  setTimeout(function(){document.getElementById('settings-overlay').classList.add('hidden')},800);
+}
+
+loadSettings();
+
+// ============================================================
+// 登录 / 注册
+// ============================================================
+var AUTH_USER = null;
+
+function switchAuthTab(tab){
+  document.querySelectorAll('.auth-tab').forEach(function(t){t.classList.remove('active')});
+  document.querySelector('.auth-tab[onclick*="'+tab+'"]').classList.add('active');
+  document.getElementById('login-form').classList.toggle('hidden',tab!=='login');
+  document.getElementById('register-form').classList.toggle('hidden',tab!=='register');
+  document.getElementById('auth-msg').textContent='';
+}
+
+function doLogin(e){
+  e.preventDefault();
+  var u=document.getElementById('login-username').value.trim();
+  // 开发环境：任意用户名+任意密码即可登录
+  AUTH_USER={id:u,name:u};
+  document.getElementById('auth-overlay').style.display='none';
+  document.getElementById('auth-msg').textContent='';
+}
+
+function doRegister(e){
+  e.preventDefault();
+  var p1=document.getElementById('reg-password').value;
+  var p2=document.getElementById('reg-password2').value;
+  if(p1!==p2){document.getElementById('auth-msg').textContent='两次密码不一致';return;}
+  var u=document.getElementById('reg-username').value.trim();
+  localStorage.setItem('crm_ai_user',JSON.stringify({id:u,name:u}));
+  AUTH_USER={id:u,name:u};
+  document.getElementById('auth-overlay').style.display='none';
+}
+
+// 检查是否已登录
+try{var saved=JSON.parse(localStorage.getItem('crm_ai_user'));if(saved)AUTH_USER=saved;document.getElementById('auth-overlay').style.display='none'}catch(e){}
 
 // ============================================================
 // 状态管理
