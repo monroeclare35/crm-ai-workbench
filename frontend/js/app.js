@@ -196,6 +196,8 @@ async function sendViaAgentAPI(message, apiUrl) {
     var buffer = '';
     var assistantDiv = null;
     var fullContent = '';
+    var traceSteps=document.getElementById('trace-steps');
+    var firstEvent=true;
 
     while (true) {
       var result = await reader.read();
@@ -213,6 +215,7 @@ async function sendViaAgentAPI(message, apiUrl) {
         try {
           var ev = JSON.parse(data);
           if (ev.type === 'text_delta') {
+            if (firstEvent){traceSteps.innerHTML='';firstEvent=false}
             if (!assistantDiv) {
               assistantDiv = document.createElement('div');
               assistantDiv.className = 'message assistant';
@@ -223,24 +226,16 @@ async function sendViaAgentAPI(message, apiUrl) {
             assistantDiv.querySelector('.message-content').innerHTML = renderMarkdown(fullContent);
             scrollToBottom();
           } else if (ev.type === 'tool_call') {
-            // Agent 正在调工具 — 显示在 trace 面板
-            var trace = document.getElementById('agent-trace');
-            var steps = document.getElementById('trace-steps');
-            trace.classList.remove('hidden');
+            if (firstEvent){traceSteps.innerHTML='';firstEvent=false}
             var stepEl = document.createElement('div');
             stepEl.className = 'trace-step tool';
-            stepEl.innerHTML = '<span class="step-icon">[==]</span><span class="step-body">调用: <strong>' + ev.tool_name + '</strong> ' + JSON.stringify(ev.tool_input||{}).substring(0, 100) + '</span>';
-            steps.appendChild(stepEl);
-            steps.scrollTop = steps.scrollHeight;
-            // 也显示在聊天里
-            var toolDiv = document.createElement('div');
-            toolDiv.className = 'message system';
-            toolDiv.innerHTML = '<div class="message-content" style="font-size:12px;color:var(--text3)">[工具调用] ' + ev.tool_name + '</div>';
-            chatMessages.appendChild(toolDiv);
-            scrollToBottom();
+            stepEl.innerHTML = '<span class="step-icon">&#x1F527;</span><span class="step-body">调用: <strong>' + ev.tool_name + '</strong></span>';
+            traceSteps.appendChild(stepEl);
+            traceSteps.scrollTop = traceSteps.scrollHeight;
           } else if (ev.type === 'done') {
-            if (ev.usage) {
-              console.log('Agent tokens:', ev.usage);
+            traceSteps.innerHTML='<div class="trace-step done"><span class="step-icon">&#x2714;</span><span class="step-body">完成'+(ev.usage?' ('+ev.usage.output_tokens+' tokens)':'')+'</span></div>';
+            if (!assistantDiv && !fullContent) {
+              // Agent might have only called tools without text response
             }
           }
         } catch(e) {}
@@ -296,7 +291,12 @@ async function sendMessage() {
   chatInput.style.height = 'auto';
   sendBtn.disabled = true;
   setAgentStatus('working');
-  simulateAgentTrace(message);
+
+  // 清空trace面板准备显示真实Agent步骤
+  var trace=document.getElementById('agent-trace');
+  var steps=document.getElementById('trace-steps');
+  trace.classList.remove('hidden');
+  steps.innerHTML='<div class="trace-step think"><span class="step-icon">...</span><span class="step-body">Agent 启动中... (Render冷启动需30-60秒)</span></div>';
 
   appendMessage('user', message);
   scrollToBottom();
