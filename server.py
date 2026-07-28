@@ -1,24 +1,19 @@
 """
-CRM AI 工作台 — FastAPI 后端服务
-将 Claude Agent SDK 的 Agent Loop 包装为 SSE 流式 API
-前端通过 /api/v1/chat/stream 调用
+CRM AI 工作台 — FastAPI 后端
+Claude Agent SDK + MCP tools + DeepSeek V4
 """
 
-import os, sys, json, asyncio
+import os, sys, json, asyncio, shutil, subprocess
+
 os.environ.setdefault("ANTHROPIC_BASE_URL","https://api.deepseek.com/anthropic")
 os.environ.setdefault("ANTHROPIC_AUTH_TOKEN","sk-530763cc55cc4320b16089a9e9730a72")
 os.environ.setdefault("ANTHROPIC_API_KEY","sk-530763cc55cc4320b16089a9e9730a72")
 os.environ.setdefault("ANTHROPIC_MODEL","deepseek-v4-pro")
 
 from fastapi import FastAPI, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
-from claude_agent_sdk import (
-    query, ClaudeAgentOptions, ResultMessage, StreamEvent,
-    tool, create_sdk_mcp_server, ToolAnnotations,
-)
 
 # ═════════════ MOCK ═════════════
 C=[{"id":"C001","name":"上海美妆科技","industry":"电商(美妆)","cost_30d_wan":285,"roi":3.3,"trend":"rising","health":"healthy","products":"千川+引擎","accounts":8},
@@ -37,37 +32,43 @@ KB={"oCPM":"oCPM以转化为优化目标。日转化>=20效果最佳。学习期
 BENCHMARK={"电商":{"ctr":2.1,"cvr":1.8,"cpa":45,"roi":2.6},"游戏":{"ctr":2.8,"cvr":1.5,"cpa":38,"roi":2.2},"教育":{"ctr":1.8,"cvr":2.5,"cpa":55,"roi":3.1},"AI/科技":{"ctr":2.3,"cvr":2.0,"cpa":65,"roi":2.9}}
 
 # ═════════════ MCP Tools ═════════════
-@tool("search_customers","搜索客户。按名称关键词、行业筛选。",{"keyword":str,"industry":str},annotations=ToolAnnotations(readOnlyHint=True))
-async def t_search(args):
-    kw=(args.get("keyword")or"").lower();ind=(args.get("industry")or"").lower()
-    r=[{"id":c["id"],"name":c["name"],"industry":c["industry"],"cost_30d_wan":c["cost_30d_wan"],"roi":c["roi"],"health":c["health"]} for c in C if(not kw or kw in c["name"].lower()or kw in c["industry"].lower())and(not ind or ind in c["industry"].lower())]
-    return{"content":[{"type":"text","text":json.dumps(r,ensure_ascii=False)}]}
+try:
+    from claude_agent_sdk import tool, create_sdk_mcp_server, ToolAnnotations
 
-@tool("get_customer_detail","获取客户完整详情(消耗/ROI/趋势/健康/产品/告警)",{"customer_id":str},annotations=ToolAnnotations(readOnlyHint=True))
-async def t_detail(args):
-    for c in C:
-        if c["id"]==args["customer_id"]:return{"content":[{"type":"text","text":json.dumps(c,ensure_ascii=False)}]}
-    return{"content":[{"type":"text","text":"NOT FOUND"}],"is_error":True}
+    @tool("search_customers","搜索客户。按名称关键词、行业筛选。",{"keyword":str,"industry":str},annotations=ToolAnnotations(readOnlyHint=True))
+    async def t_search(args):
+        kw=(args.get("keyword")or"").lower();ind=(args.get("industry")or"").lower()
+        r=[{"id":c["id"],"name":c["name"],"industry":c["industry"],"cost_30d_wan":c["cost_30d_wan"],"roi":c["roi"],"health":c["health"]} for c in C if(not kw or kw in c["name"].lower()or kw in c["industry"].lower())and(not ind or ind in c["industry"].lower())]
+        return{"content":[{"type":"text","text":json.dumps(r,ensure_ascii=False)}]}
 
-@tool("search_knowledge","搜索广告知识库(策略/产品/合规/冷启动)",{"query":str},annotations=ToolAnnotations(readOnlyHint=True))
-async def t_knowledge(args):
-    q=args["query"].lower();r=[]
-    for k,v in KB.items():
-        if any(w in q for w in k):r.append({"title":k,"content":v})
-    if not r:r=[{"title":"通用","content":"请查看行业benchmark或联系运营团队。"}]
-    return{"content":[{"type":"text","text":json.dumps(r,ensure_ascii=False)}]}
+    @tool("get_customer_detail","客户详情(消耗/ROI/趋势/健康/产品/告警)",{"customer_id":str},annotations=ToolAnnotations(readOnlyHint=True))
+    async def t_detail(args):
+        for c in C:
+            if c["id"]==args["customer_id"]:return{"content":[{"type":"text","text":json.dumps(c,ensure_ascii=False)}]}
+        return{"content":[{"type":"text","text":"NOT FOUND"}],"is_error":True}
 
-@tool("get_benchmark","获取行业广告基准数据(CTR/CVR/CPA/ROI)",{"industry":str},annotations=ToolAnnotations(readOnlyHint=True))
-async def t_benchmark(args):
-    b=BENCHMARK.get(args.get("industry",""),{"ctr":2.35,"cvr":1.8,"cpa":50,"roi":2.7})
-    return{"content":[{"type":"text","text":json.dumps(b,ensure_ascii=False)}]}
+    @tool("search_knowledge","搜索广告知识库(策略/产品/合规/冷启动)",{"query":str},annotations=ToolAnnotations(readOnlyHint=True))
+    async def t_knowledge(args):
+        q=args["query"].lower();r=[]
+        for k,v in KB.items():
+            if any(w in q for w in k):r.append({"title":k,"content":v})
+        if not r:r=[{"title":"通用","content":"请查看行业benchmark或联系运营团队。"}]
+        return{"content":[{"type":"text","text":json.dumps(r,ensure_ascii=False)}]}
 
-srv=create_sdk_mcp_server(name="crm",version="1.0",tools=[t_search,t_detail,t_knowledge,t_benchmark])
+    @tool("get_benchmark","行业基准数据(CTR/CVR/CPA/ROI)",{"industry":str},annotations=ToolAnnotations(readOnlyHint=True))
+    async def t_benchmark(args):
+        b=BENCHMARK.get(args.get("industry",""),{"ctr":2.35,"cvr":1.8,"cpa":50,"roi":2.7})
+        return{"content":[{"type":"text","text":json.dumps(b,ensure_ascii=False)}]}
 
-SYS="""你是广告AI策略Agent。不是聊天机器人——主动调工具、拿数据、做分析。
+    srv=create_sdk_mcp_server(name="crm",version="1.0",tools=[t_search,t_detail,t_knowledge,t_benchmark])
+    SDK_READY=True
+except Exception as e:
+    SDK_READY=False; SDK_ERROR=str(e)
+
+SYS="""你是广告AI策略Agent。你不是聊天机器人——主动调工具、拿数据、做分析。
 
 ## 工具
-- get_customer_detail(customer_id): 查客户详情(消耗/ROI/趋势/健康/产品/告警)
+- get_customer_detail(customer_id): 客户详情(消耗/ROI/趋势/健康/产品)
 - search_customers(keyword,industry): 搜客户列表
 - search_knowledge(query): 搜广告知识库
 - get_benchmark(industry): 查行业基准
@@ -75,15 +76,14 @@ SYS="""你是广告AI策略Agent。不是聊天机器人——主动调工具、
 - Write: 保存文件
 
 ## 规则
-1. 用户问客户->先调get_customer_detail
-2. 分析需基于工具返回的真实数据
-3. ROI异常->调search_knowledge查原因+get_benchmark对比行业
+1. 用户问客户->先调get_customer_detail获取真实数据
+2. 分析必须基于工具返回的数据
+3. ROI异常->同时调search_knowledge查原因+get_benchmark对比行业
 4. 结构化输出:表格+分点
-5. 创意生成请求->按产品线(千川15-30秒视频/搜索30字标题/引擎原生软文)差异化输出
-6. 每条建议具体可落地
+5. 创意生成:按产品线(千川15-30秒/搜索30字/引擎原生)差异化
 
 ## 客户速查
-C001上海美妆(电商/ROI3.3) C002杭州鲸灵(游戏/ROI1.3,告警!) C003南京星辉(教育/ROI2.1) C004北京未来(AI/ROI4.5) C005深圳鹏程(电商/ROI2.9)
+C001上海美妆(电商/ROI3.3) C002杭州鲸灵(游戏/ROI1.3告警!) C003南京星辉(教育/ROI2.1) C004北京未来(AI/ROI4.5) C005深圳鹏程(电商/ROI2.9)
 """
 
 # ═════════════ App ═════════════
@@ -96,41 +96,48 @@ class ChatReq(BaseModel):
 
 @app.post("/api/v1/chat/stream")
 async def chat_stream(req:ChatReq):
-    """SSE流式Agent对话"""
+    if not SDK_READY:
+        async def err(): yield f"data: {json.dumps({'type':'error','content':f'SDK init failed: {SDK_ERROR}'})}\n\n"
+        return StreamingResponse(err(),media_type="text/event-stream")
+
+    from claude_agent_sdk import query, ClaudeAgentOptions, ResultMessage, StreamEvent
     async def gen():
-        opts=ClaudeAgentOptions(model="deepseek-v4-pro",system_prompt=SYS,mcp_servers={"crm":srv},
-            allowed_tools=["Bash","Write","mcp__crm__*"],permission_mode="bypassPermissions",max_turns=10,
-            cwd=os.getcwd())
-        async for msg in query(prompt=req.message,options=opts):
-            t=type(msg).__name__
-            if isinstance(msg,StreamEvent):
-                try:
-                    ev=msg.event
-                    if isinstance(ev,dict):
-                        ty=ev.get("type","")
-                        if ty=="content_block_start":
-                            cb=ev.get("content_block",{})
-                            if cb.get("type")=="tool_use":
-                                nm=cb.get("name","");inp=cb.get("input",{})
-                                yield f"data: {json.dumps({'type':'tool_call','tool_name':nm,'tool_input':inp},ensure_ascii=False)}\n\n"
-                        elif ty=="content_block_delta":
-                            d=ev.get("delta",{})
-                            if d.get("type")=="text_delta":yield f"data: {json.dumps({'type':'text_delta','content':d.get('text','')},ensure_ascii=False)}\n\n"
-                            elif d.get("type")=="input_json_delta":yield f"data: {json.dumps({'type':'text_delta','content':d.get('partial_json','')},ensure_ascii=False)}\n\n"
-                except:pass
-            elif isinstance(msg,ResultMessage):
-                u=getattr(msg,'usage',None)
-                tk={"input_tokens":0,"output_tokens":0}
-                if isinstance(u,dict):tk=u
-                yield f"data: {json.dumps({'type':'done','usage':tk},ensure_ascii=False)}\n\n"
+        try:
+            cli=shutil.which("claude") or shutil.which("node")
+            opts=ClaudeAgentOptions(model="deepseek-v4-pro",system_prompt=SYS,mcp_servers={"crm":srv},
+                allowed_tools=["Bash","Write","mcp__crm__*"],permission_mode="bypassPermissions",max_turns=10,
+                cwd=os.getcwd(),cli_path=cli)
+            async for msg in query(prompt=req.message,options=opts):
+                if isinstance(msg,StreamEvent):
+                    try:
+                        ev=msg.event
+                        if isinstance(ev,dict):
+                            ty=ev.get("type","")
+                            if ty=="content_block_start":
+                                cb=ev.get("content_block",{})
+                                if cb.get("type")=="tool_use":
+                                    yield f"data: {json.dumps({'type':'tool_call','tool_name':cb.get('name',''),'tool_input':cb.get('input',{})},ensure_ascii=False)}\n\n"
+                            elif ty=="content_block_delta":
+                                d=ev.get("delta",{})
+                                if d.get("type")=="text_delta":yield f"data: {json.dumps({'type':'text_delta','content':d.get('text','')},ensure_ascii=False)}\n\n"
+                    except:pass
+                elif isinstance(msg,ResultMessage):
+                    u=getattr(msg,'usage',None); tk={"input_tokens":0,"output_tokens":0}
+                    if isinstance(u,dict):tk=u
+                    yield f"data: {json.dumps({'type':'done','usage':tk},ensure_ascii=False)}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'type':'error','content':str(e)},ensure_ascii=False)}\n\n"
     return StreamingResponse(gen(),media_type="text/event-stream",
         headers={"Cache-Control":"no-cache","X-Accel-Buffering":"no"})
 
 @app.get("/api/v1/health")
-async def health():return{"status":"ok","agent":"Claude Agent SDK + DeepSeek V4 Pro"}
+async def health():
+    return {"status":"ok","agent":"Claude Agent SDK + DeepSeek V4 Pro","sdk_ready":SDK_READY,"sdk_error":SDK_ERROR if not SDK_READY else None,"claude_path":shutil.which("claude") or "NOT FOUND","node_version":subprocess.run(["node","-v"],capture_output=True,text=True).stdout.strip() if shutil.which("node") else "NO NODE"}
 
 if __name__=="__main__":
     import uvicorn
     port=int(os.environ.get("PORT",8000))
-    print(f"\n=== CRM AI Agent Server :{port} ===")
+    print(f"\n=== CRM AI Agent :{port} ===")
+    print(f"SDK ready: {SDK_READY}")
+    print(f"Claude path: {shutil.which('claude')}")
     uvicorn.run(app,host="0.0.0.0",port=port,log_level="info")

@@ -1,13 +1,17 @@
 FROM node:22-slim
 
-# Python
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-pip python3-venv curl && rm -rf /var/lib/apt/lists/*
 
 # Claude Code CLI — SDK 的引擎
-RUN npm install -g @anthropic-ai/claude-code --unsafe-perm
+RUN npm install -g @anthropic-ai/claude-code --unsafe-perm 2>&1 || true
+RUN which claude || (echo "Creating claude wrapper..." && \
+    CLI_JS=$(find /usr/local/lib/node_modules/@anthropic-ai/claude-code -name "cli.js" 2>/dev/null | head -1) && \
+    if [ -n "$CLI_JS" ]; then echo '#!/bin/sh' > /usr/local/bin/claude && echo "exec node $CLI_JS \"\$@\"" >> /usr/local/bin/claude && chmod +x /usr/local/bin/claude; fi) || true
+RUN echo "claude path: $(which claude || echo NOT FOUND)"
+RUN ls -la /usr/local/bin/claude 2>/dev/null || echo "no claude binary"
+RUN ls /usr/local/lib/node_modules/@anthropic-ai/claude-code/ 2>/dev/null | head -5 || echo "no claude-code module"
 
-# Python deps
 RUN pip3 install --break-system-packages --no-cache-dir \
     claude-agent-sdk fastapi uvicorn
 
