@@ -86,9 +86,14 @@ function doRegister(){
   document.getElementById('auth-overlay').style.display='none';
 }
 
-// DOM 就绪后检查已登录
+// 注销
+function doLogout(){localStorage.removeItem('crm_ai_user');AUTH_USER=null;document.getElementById('auth-overlay').style.display='flex';closeDrill()}
+
+// 自动登录
 document.addEventListener('DOMContentLoaded',function(){
-  try{var s=JSON.parse(localStorage.getItem('crm_ai_user'));if(s&&s.id){AUTH_USER=s;document.getElementById('auth-overlay').style.display='none'}}catch(e){}
+  setTimeout(function(){
+    try{var s=JSON.parse(localStorage.getItem('crm_ai_user'));if(s&&s.id){AUTH_USER=s;document.getElementById('auth-overlay').style.display='none'}}catch(e){}
+  },200);
 });
 
 // ============================================================
