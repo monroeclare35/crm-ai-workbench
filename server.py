@@ -11,10 +11,8 @@ os.environ["ANTHROPIC_MODEL"]="deepseek-v4-pro"
 
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import uvicorn
 
 from claude_agent_sdk import (
     query, ClaudeAgentOptions, ResultMessage, StreamEvent,
@@ -130,11 +128,8 @@ async def chat_stream(req:ChatReq):
 @app.get("/api/v1/health")
 async def health():return{"status":"ok","agent":"Claude Agent SDK + DeepSeek V4 Pro"}
 
-# Serve frontend
-frontend_dir=os.path.join(os.path.dirname(__file__),"frontend")
-if os.path.exists(frontend_dir):app.mount("/",StaticFiles(directory=frontend_dir,html=True),name="frontend")
-
 if __name__=="__main__":
-    print("\n=== CRM AI Agent Server ===")
-    print("http://localhost:8000")
-    uvicorn.run(app,host="0.0.0.0",port=8000,log_level="info")
+    import uvicorn
+    port=int(os.environ.get("PORT",8000))
+    print(f"\n=== CRM AI Agent Server :{port} ===")
+    uvicorn.run(app,host="0.0.0.0",port=port,log_level="info")
