@@ -10,22 +10,22 @@
 // ============================================================
 var API_CONFIG = { baseUrl: '', apiKey: '', model: '' };
 
-// 预设配置
+// 预设配置 — 可直接调用的 API 端点
 var PRESETS = {
-  deepseek: { baseUrl: 'https://api.deepseek.com/anthropic', model: 'deepseek-v4-pro' },
-  kimi:     { baseUrl: 'https://api.moonshot.ai/anthropic',  model: 'kimi-k2.6' },
-  glm:      { baseUrl: 'https://open.bigmodel.cn/api/anthropic', model: 'glm-4.5' }
+  deepseek: { apiUrl: 'https://api.deepseek.com/v1/chat/completions', model: 'deepseek-v4-pro' },
+  kimi:     { apiUrl: 'https://api.moonshot.ai/v1/chat/completions',  model: 'kimi-k2.6' },
+  glm:      { apiUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions', model: 'glm-4.5' }
 };
 
 function loadSettings(){
   try{
     var s=JSON.parse(localStorage.getItem('crm_ai_settings'));
-    if(s){ API_CONFIG.baseUrl=s.baseUrl||''; API_CONFIG.apiKey=s.apiKey||''; API_CONFIG.model=s.model||''; }
+    if(s){ API_CONFIG.apiUrl=s.apiUrl||''; API_CONFIG.apiKey=s.apiKey||''; API_CONFIG.model=s.model||''; }
   }catch(e){}
 }
 
 function openSettings(){
-  document.getElementById('set-base-url').value=API_CONFIG.baseUrl;
+  document.getElementById('set-api-url').value=API_CONFIG.apiUrl;
   document.getElementById('set-api-key').value=API_CONFIG.apiKey;
   document.getElementById('set-model').value=API_CONFIG.model;
   document.getElementById('settings-overlay').classList.remove('hidden');
@@ -39,15 +39,15 @@ function closeSettings(e){
 
 function applyPreset(name){
   var p=PRESETS[name];
-  if(p){ document.getElementById('set-base-url').value=p.baseUrl; document.getElementById('set-model').value=p.model; }
+  if(p){ document.getElementById('set-api-url').value=p.apiUrl; document.getElementById('set-model').value=p.model; }
 }
 
 function saveSettings(){
-  API_CONFIG.baseUrl=document.getElementById('set-base-url').value.trim();
+  API_CONFIG.apiUrl=document.getElementById('set-api-url').value.trim();
   API_CONFIG.apiKey=document.getElementById('set-api-key').value.trim();
   API_CONFIG.model=document.getElementById('set-model').value.trim();
   localStorage.setItem('crm_ai_settings',JSON.stringify(API_CONFIG));
-  document.getElementById('settings-msg').textContent='✓ 已保存 (下次对话生效)';
+  document.getElementById('settings-msg').textContent='✓ 已保存';
   setTimeout(function(){document.getElementById('settings-overlay').classList.add('hidden')},800);
 }
 
@@ -166,8 +166,14 @@ function initChat() {
 }
 
 async function sendMessage() {
-  const message = chatInput.value.trim();
+  var message = chatInput.value.trim();
   if (!message || state.isStreaming) return;
+
+  // 检查API配置
+  if (!API_CONFIG.apiKey) {
+    appendMessage('system', '⚠️ 请先点击左下角 ⚙️ 设置 API Key（然后选 DeepSeek 预设）');
+    return;
+  }
 
   state.isStreaming = true;
   chatInput.value = '';
@@ -175,86 +181,86 @@ async function sendMessage() {
   sendBtn.disabled = true;
   chatLoading.classList.remove('hidden');
 
-  // 添加用户消息
   appendMessage('user', message);
   scrollToBottom();
 
+  var apiUrl = API_CONFIG.apiUrl || 'https://api.deepseek.com/v1/chat/completions';
+  var model = API_CONFIG.model || 'deepseek-v4-pro';
+
+  // System Prompt — 广告AI策略助手
+  var systemPrompt = '你是抖音集团广告AI策略助手。你擅长：\n'+
+    '1. AIGC创意生成：千川/引擎/搜索/穿山甲各产品线的文案、脚本、素材策略\n'+
+    '2. 搜广告变现诊断：填充率、eCPM、关键词覆盖率分析和优化建议\n'+
+    '3. 投放效果拆解：ROI/CTR/CVR/CPA多维度诊断，定位问题根因\n'+
+    '4. 出价策略推荐：oCPM/oCPC/自动出价的选择和调优\n'+
+    '5. 行业竞品分析：投放趋势、素材策略、差异化建议\n'+
+    '回答要求：结构化、数据驱动、建议具体可落地。如果是创意生成类请求，给出可直接使用的文案。';
+
   try {
-    const response = await fetch('/api/v1/chat/stream', {
+    var response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-User-Id': state.userId,
+        'Authorization': 'Bearer ' + API_CONFIG.apiKey
       },
       body: JSON.stringify({
-        message,
-        task_type: modelSelect.value,
-        session_id: state.sessionId,
-      }),
+        model: model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: message }
+        ],
+        stream: true,
+        temperature: 0.7,
+        max_tokens: 4096
+      })
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      var errText = await response.text();
+      throw new Error('HTTP ' + response.status + ': ' + (errText||'').substring(0, 200));
     }
 
-    // 读取 SSE 流
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let assistantDiv = null;
-    let fullContent = '';
+    var reader = response.body.getReader();
+    var decoder = new TextDecoder();
+    var buffer = '';
+    var assistantDiv = null;
+    var fullContent = '';
 
     while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+      var result = await reader.read();
+      if (result.done) break;
+      buffer += decoder.decode(result.value, { stream: true });
+      var lines = buffer.split('\n');
+      buffer = lines.pop() || '';
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';  // 最后不完整的行留在 buffer
-
-      for (const line of lines) {
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
         if (!line.startsWith('data: ')) continue;
-        const data = line.slice(6);
-        if (!data) continue;
+        var data = line.slice(6).trim();
+        if (!data || data === '[DONE]') continue;
 
         try {
-          const event = JSON.parse(data);
-
-          if (event.type === 'text_delta') {
+          var chunk = JSON.parse(data);
+          var delta = chunk.choices && chunk.choices[0] && chunk.choices[0].delta;
+          if (delta && delta.content) {
             if (!assistantDiv) {
               assistantDiv = document.createElement('div');
               assistantDiv.className = 'message assistant';
-              const contentDiv = document.createElement('div');
-              contentDiv.className = 'message-content';
-              assistantDiv.appendChild(contentDiv);
+              assistantDiv.innerHTML = '<div class="message-content"></div>';
               chatMessages.appendChild(assistantDiv);
             }
-            fullContent += event.content;
-            // 渲染 Markdown（简单版）
+            fullContent += delta.content;
             assistantDiv.querySelector('.message-content').innerHTML = renderMarkdown(fullContent);
             scrollToBottom();
-          } else if (event.type === 'tool_call') {
-            // 显示工具调用状态
-            const toolDiv = document.createElement('div');
-            toolDiv.className = 'message system';
-            toolDiv.innerHTML = `<div class="message-content" style="font-size:12px;color:var(--gray-500);">🔧 调用工具: <strong>${event.tool_name}</strong></div>`;
-            chatMessages.appendChild(toolDiv);
-            scrollToBottom();
-          } else if (event.type === 'done') {
-            state.sessionId = event.session_id || state.sessionId;
-            if (event.usage) {
-              console.log('Token usage:', event.usage);
-            }
-          } else if (event.type === 'error') {
-            appendMessage('system', `❌ 错误: ${event.content}`);
           }
-        } catch (e) {
-          console.error('Parse event error:', e, data);
-        }
+        } catch(e) {}
       }
     }
+    if (!fullContent) {
+      appendMessage('system', '⚠️ 模型返回为空，请检查 API Key 和模型名称是否正确');
+    }
   } catch (error) {
-    appendMessage('system', `❌ 连接失败: ${error.message}`);
+    appendMessage('system', '❌ ' + error.message + '\n\n请检查：\n1. 点击 ⚙️ 设置 → 选 DeepSeek 预设 → 填 API Key → 保存\n2. API Key 格式应为 sk-...\n3. 确认网络能访问 api.deepseek.com');
   } finally {
     state.isStreaming = false;
     sendBtn.disabled = false;
