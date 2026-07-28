@@ -66,28 +66,30 @@ function switchAuthTab(tab){
   document.getElementById('auth-msg').textContent='';
 }
 
-function doLogin(e){
-  e.preventDefault();
-  var u=document.getElementById('login-username').value.trim();
-  // 开发环境：任意用户名+任意密码即可登录
+function doLogin(){
+  var u=document.getElementById('login-username').value.trim()||'dev-user';
   AUTH_USER={id:u,name:u};
+  localStorage.setItem('crm_ai_user',JSON.stringify(AUTH_USER));
   document.getElementById('auth-overlay').style.display='none';
   document.getElementById('auth-msg').textContent='';
 }
 
-function doRegister(e){
-  e.preventDefault();
+function doRegister(){
+  var u=document.getElementById('reg-username').value.trim();
+  if(!u){document.getElementById('auth-msg').textContent='请输入用户名';return;}
   var p1=document.getElementById('reg-password').value;
   var p2=document.getElementById('reg-password2').value;
+  if(!p1||p1.length<6){document.getElementById('auth-msg').textContent='密码至少6位';return;}
   if(p1!==p2){document.getElementById('auth-msg').textContent='两次密码不一致';return;}
-  var u=document.getElementById('reg-username').value.trim();
-  localStorage.setItem('crm_ai_user',JSON.stringify({id:u,name:u}));
   AUTH_USER={id:u,name:u};
+  localStorage.setItem('crm_ai_user',JSON.stringify(AUTH_USER));
   document.getElementById('auth-overlay').style.display='none';
 }
 
-// 检查是否已登录
-try{var saved=JSON.parse(localStorage.getItem('crm_ai_user'));if(saved)AUTH_USER=saved;document.getElementById('auth-overlay').style.display='none'}catch(e){}
+// DOM 就绪后检查已登录
+document.addEventListener('DOMContentLoaded',function(){
+  try{var s=JSON.parse(localStorage.getItem('crm_ai_user'));if(s&&s.id){AUTH_USER=s;document.getElementById('auth-overlay').style.display='none'}}catch(e){}
+});
 
 // ============================================================
 // 状态管理
@@ -211,8 +213,18 @@ async function sendMessage() {
   var apiUrl = API_CONFIG.apiUrl || 'https://api.deepseek.com/v1/chat/completions';
   var model = API_CONFIG.model || 'deepseek-v4-pro';
 
-  // System Prompt — 广告AI策略助手
-  var systemPrompt = '你是抖音集团广告AI策略助手。你擅长：\n'+
+  // System Prompt — 广告AI策略助手 (含客户数据)
+  var systemPrompt = '你是抖音集团广告AI策略助手，服务于华东区广告策略团队。\n\n'+
+    '## 你的客户数据（你可以直接查询和分析这些客户的投放情况）\n'+
+    '| 客户名称 | ID | 行业 | 等级 | 近30天消耗 | ROI | 趋势 | 健康 | 主要产品 |\n'+
+    '|---------|-----|------|------|-----------|-----|------|------|----------|\n'+
+    '| 上海美妆科技有限公司 | C001 | 电商(美妆) | S | ¥285万 | 3.3 | ↑上升 | 🟢健康 | 千川+引擎 |\n'+
+    '| 杭州鲸灵网络有限公司 | C002 | 游戏(手游) | A | ¥152万 | 1.3 | ↓下降 | 🟡关注 | 引擎+穿山甲 |\n'+
+    '| 南京星辉教育科技有限公司 | C003 | 教育(职业技能) | B | ¥68万 | 2.1 | →平稳 | 🟡关注 | 千川 |\n'+
+    '| 北京未来科技有限公司 | C004 | AI/科技(大模型) | S | ¥520万 | 4.5 | ↑上升 | 🟢健康 | 引擎+搜索 |\n'+
+    '| 深圳鹏程电商有限公司 | C005 | 电商(综合) | A | ¥890万 | 2.9 | →平稳 | 🟢健康 | 千川+引擎+穿山甲 |\n\n'+
+    '当用户询问某个客户的情况时，请基于上表数据给出详细的投放分析，包括：消耗趋势解读、ROI评估、健康度判断、与同行业对比、优化建议。\n\n'+
+    '## 你的核心能力\n'+
     '1. AIGC创意生成：千川/引擎/搜索/穿山甲各产品线的文案、脚本、素材策略\n'+
     '2. 搜广告变现诊断：填充率、eCPM、关键词覆盖率分析和优化建议\n'+
     '3. 投放效果拆解：ROI/CTR/CVR/CPA多维度诊断，定位问题根因\n'+
