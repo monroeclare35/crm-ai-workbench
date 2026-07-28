@@ -5,10 +5,12 @@ Claude Agent SDK + MCP tools + DeepSeek V4
 
 import os, sys, json, asyncio, shutil, subprocess
 
-os.environ.setdefault("ANTHROPIC_BASE_URL","https://api.deepseek.com/anthropic")
-os.environ.setdefault("ANTHROPIC_AUTH_TOKEN","sk-530763cc55cc4320b16089a9e9730a72")
-os.environ.setdefault("ANTHROPIC_API_KEY","sk-530763cc55cc4320b16089a9e9730a72")
-os.environ.setdefault("ANTHROPIC_MODEL","deepseek-v4-pro")
+os.environ["ANTHROPIC_BASE_URL"]="https://api.deepseek.com/anthropic"
+os.environ["ANTHROPIC_AUTH_TOKEN"]="sk-530763cc55cc4320b16089a9e9730a72"
+os.environ["ANTHROPIC_API_KEY"]="sk-530763cc55cc4320b16089a9e9730a72"
+os.environ["ANTHROPIC_MODEL"]="deepseek-v4-pro"
+os.environ["CLAUDE_CODE_SKIP_AUTH"]="1"
+os.environ["DISABLE_ANTHROPIC_OAUTH"]="1"
 
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse, JSONResponse
@@ -132,7 +134,18 @@ async def chat_stream(req:ChatReq):
 
 @app.get("/api/v1/health")
 async def health():
-    return {"status":"ok","agent":"Claude Agent SDK + DeepSeek V4 Pro","sdk_ready":SDK_READY,"sdk_error":SDK_ERROR if not SDK_READY else None,"claude_path":shutil.which("claude") or "NOT FOUND","node_version":subprocess.run(["node","-v"],capture_output=True,text=True).stdout.strip() if shutil.which("node") else "NO NODE"}
+    info={"status":"ok","agent":"Claude Agent SDK + DeepSeek V4 Pro","sdk_ready":SDK_READY,"claude_path":shutil.which("claude") or "NOT FOUND"}
+    # Test claude CLI
+    try:
+        r=subprocess.run(["claude","--version"],capture_output=True,text=True,timeout=10)
+        info["claude_version"]=r.stdout.strip() or r.stderr.strip()
+        info["claude_rc"]=r.returncode
+    except Exception as e: info["claude_test_err"]=str(e)
+    try:
+        r=subprocess.run(["node","-e","console.log('ok')"],capture_output=True,text=True,timeout=5)
+        info["node_test"]=r.stdout.strip()
+    except Exception as e: info["node_test_err"]=str(e)
+    return info
 
 if __name__=="__main__":
     import uvicorn
