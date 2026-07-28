@@ -110,7 +110,7 @@ async def chat_stream(req:ChatReq):
             def capture_stderr(line): stderr_lines.append(line)
             opts=ClaudeAgentOptions(model="deepseek-v4-pro",system_prompt=SYS,mcp_servers={"crm":srv},
                 allowed_tools=["Bash","Write","mcp__crm__*"],permission_mode="bypassPermissions",max_turns=10,
-                cwd=os.getcwd(),cli_path=cli,stderr=capture_stderr)
+                cwd=os.getcwd(),cli_path=cli,stderr=capture_stderr,include_partial_messages=True)
             async for msg in query(prompt=req.message,options=opts):
                 if isinstance(msg,StreamEvent):
                     try:
@@ -119,11 +119,18 @@ async def chat_stream(req:ChatReq):
                             ty=ev.get("type","")
                             if ty=="content_block_start":
                                 cb=ev.get("content_block",{})
-                                if cb.get("type")=="tool_use":
-                                    yield f"data: {json.dumps({'type':'tool_call','tool_name':cb.get('name',''),'tool_input':cb.get('input',{})},ensure_ascii=False)}\n\n"
+                                cbt=cb.get("type","")
+                                if cbt=="tool_use":
+                                    yield f"data: {json.dumps({'type':'agent_step','step':'tool_call','name':cb.get('name',''),'input':cb.get('input',{})},ensure_ascii=False)}\n\n"
+                                elif cbt=="thinking":
+                                    yield f"data: {json.dumps({'type':'agent_step','step':'thinking'},ensure_ascii=False)}\n\n"
                             elif ty=="content_block_delta":
                                 d=ev.get("delta",{})
-                                if d.get("type")=="text_delta":yield f"data: {json.dumps({'type':'text_delta','content':d.get('text','')},ensure_ascii=False)}\n\n"
+                                dt=d.get("type","")
+                                if dt=="text_delta":yield f"data: {json.dumps({'type':'text_delta','content':d.get('text','')},ensure_ascii=False)}\n\n"
+                                elif dt=="thinking_delta":yield f"data: {json.dumps({'type':'agent_step','step':'thinking_delta','text':d.get('thinking','')[:200]},ensure_ascii=False)}\n\n"
+                            elif ty=="content_block_stop":
+                                yield f"data: {json.dumps({'type':'agent_step','step':'block_done'},ensure_ascii=False)}\n\n"
                     except:pass
                 elif isinstance(msg,ResultMessage):
                     r=getattr(msg,'result',None)

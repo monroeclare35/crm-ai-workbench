@@ -214,7 +214,19 @@ async function sendViaAgentAPI(message, apiUrl) {
 
         try {
           var ev = JSON.parse(data);
-          if (ev.type === 'text_delta') {
+          if (ev.type === 'agent_step') {
+            if (firstEvent){traceSteps.innerHTML='';firstEvent=false}
+            var icon='',cls='',body='';
+            if (ev.step==='thinking'){icon='&#x1F9E0;';cls='think';body='Agent 思考分析中...'}
+            else if (ev.step==='thinking_delta'){icon='&#x1F4AD;';cls='think';body='思考: '+(ev.text||'').substring(0,80)}
+            else if (ev.step==='tool_call'){icon='&#x1F527;';cls='tool';body='调用工具: <strong>'+ev.name+'</strong>'}
+            else if (ev.step==='block_done'){icon='';cls='done';body=''}
+            if (body){
+              var stepEl=document.createElement('div');stepEl.className='trace-step '+cls;
+              stepEl.innerHTML='<span class="step-icon">'+icon+'</span><span class="step-body">'+body+'</span>';
+              traceSteps.appendChild(stepEl);traceSteps.scrollTop=traceSteps.scrollHeight;
+            }
+          } else if (ev.type === 'text_delta') {
             if (firstEvent){traceSteps.innerHTML='';firstEvent=false}
             if (!assistantDiv) {
               assistantDiv = document.createElement('div');
@@ -225,18 +237,10 @@ async function sendViaAgentAPI(message, apiUrl) {
             fullContent += ev.content;
             assistantDiv.querySelector('.message-content').innerHTML = renderMarkdown(fullContent);
             scrollToBottom();
-          } else if (ev.type === 'tool_call') {
-            if (firstEvent){traceSteps.innerHTML='';firstEvent=false}
-            var stepEl = document.createElement('div');
-            stepEl.className = 'trace-step tool';
-            stepEl.innerHTML = '<span class="step-icon">&#x1F527;</span><span class="step-body">调用: <strong>' + ev.tool_name + '</strong></span>';
-            traceSteps.appendChild(stepEl);
-            traceSteps.scrollTop = traceSteps.scrollHeight;
           } else if (ev.type === 'done') {
-            traceSteps.innerHTML='<div class="trace-step done"><span class="step-icon">&#x2714;</span><span class="step-body">完成'+(ev.usage?' ('+ev.usage.output_tokens+' tokens)':'')+'</span></div>';
-            if (!assistantDiv && !fullContent) {
-              // Agent might have only called tools without text response
-            }
+            var doneEl=document.createElement('div');doneEl.className='trace-step done';
+            doneEl.innerHTML='<span class="step-icon">&#x2714;</span><span class="step-body">完成'+(ev.usage?' ('+ev.usage.output_tokens+' tokens)':'')+'</span>';
+            traceSteps.appendChild(doneEl);traceSteps.scrollTop=traceSteps.scrollHeight;
           }
         } catch(e) {}
       }
@@ -257,21 +261,6 @@ async function sendViaAgentAPI(message, apiUrl) {
 function setAgentStatus(status){var dot=document.querySelector('.agent-dot');var txt=document.getElementById('agent-status-text');if(status==='working'){dot.classList.add('working');txt.textContent='工作中...'}else{dot.classList.remove('working');txt.textContent='就绪'}}
 
 // 模拟 Agent 工作步骤
-function simulateAgentTrace(msg){
-  var trace=document.getElementById('agent-trace');
-  var steps=document.getElementById('trace-steps');
-  trace.classList.remove('hidden'); steps.innerHTML='';
-  // 根据消息内容推断步骤
-  var plan=[{icon:'💭',type:'think',text:'分析意图: '+msg.substring(0,40)+(msg.length>40?'...':'')},{icon:'🔍',type:'tool',text:'检索相关知识库和行业数据'}];
-  if(msg.indexOf('ROI')>-1||msg.indexOf('诊断')>-1||msg.indexOf('拆解')>-1){plan.push({icon:'📊',type:'tool',text:'调用 ad_platform__query_metrics 获取消耗/ROI/CTR数据'});plan.push({icon:'🧮',type:'think',text:'多维度对比分析: 素材/出价/定向拆解'});}
-  else if(msg.indexOf('文案')>-1||msg.indexOf('生成')>-1||msg.indexOf('创意')>-1){plan.push({icon:'🎨',type:'tool',text:'调用 creative_library__search_templates 获取行业TOP模板'});plan.push({icon:'✍️',type:'think',text:'按产品线差异化生成文案'});}
-  else if(msg.indexOf('搜索')>-1||msg.indexOf('填充率')>-1||msg.indexOf('eCPM')>-1){plan.push({icon:'🔍',type:'tool',text:'调用 search_ad__query_fill_rate 和 search_ad__query_ecpm'});}
-  else if(msg.indexOf('周报')>-1||msg.indexOf('报告')>-1){plan.push({icon:'📋',type:'tool',text:'调用 ad_platform__query_metrics 批量拉数据'});plan.push({icon:'🧮',type:'think',text:'异常检测 + 排名 + 趋势分析'});}
-  else{plan.push({icon:'🧠',type:'think',text:'综合分析中...'});}
-  plan.push({icon:'✔️',type:'done',text:'生成结果'});
-  plan.forEach(function(s,i){setTimeout(function(){var el=document.createElement('div');el.className='trace-step '+s.type;el.innerHTML='<span class="step-icon">'+s.icon+'</span><span class="step-body">'+s.text+'</span><span class="step-time">'+(i*0.2).toFixed(1)+'s</span>';steps.appendChild(el);steps.scrollTop=steps.scrollHeight;if(i===plan.length-1)setTimeout(function(){document.getElementById('agent-trace').classList.add('hidden')},1500)},i*350)});
-}
-
 function toggleTrace(){var s=document.getElementById('trace-steps');var btn=document.getElementById('trace-collapse');if(s.style.display==='none'){s.style.display='';btn.textContent='收起 ▴'}else{s.style.display='none';btn.textContent='展开 ▾'}}
 
 async function sendMessage() {
