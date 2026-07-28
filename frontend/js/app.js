@@ -408,52 +408,80 @@ function renderCustomerCards() {
 // 知识库搜索
 // ============================================================
 
-function renderKnowledgeResults(query = '') {
-  const container = document.getElementById('knowledge-results');
-  if (!container) return;
+// ============================================================
+// 知识库 — 生产级广告知识体系
+// ============================================================
 
-  const mockResults = [
-    { title: '巨量千川 oCPM 出价策略详解', content: 'oCPM是千川智能出价产品，以转化为优化目标...', category: '产品', source: '千川帮助中心' },
-    { title: '电商行业投放最佳实践', content: '优化重点：素材CTR > 落地页CVR > 出价策略...', category: '策略', source: '运营团队' },
-    { title: '教育行业广告合规要点', content: '学科类培训广告全面禁止投放，非学科需提供资质...', category: '政策', source: '审核中心' },
-    { title: '游戏买量ROI优化案例', content: '通过素材优化+定向+出价策略将ROI从1.2提升至2.5...', category: '案例', source: '案例库' },
-    { title: '巨量搜索广告投放指南', content: '搜索流量转化率是信息流的3-5倍，短语匹配为主...', category: '产品', source: '引擎帮助中心' },
-  ];
+var KNOWLEDGE_BASE=[
+  {id:'K001',title:'巨量千川 oCPM 出价策略详解',cat:'出价策略',src:'千川帮助中心',tags:['oCPM','出价','千川','转化'],
+   content:'oCPM（Optimized Cost Per Mille）以转化为优化目标，系统根据设定的转化出价自动调整。适用场景：有明确转化目标且日转化≥20个。优势：成本稳定、跑量强。注意：新建计划1-3天学习期，期间不频繁调整。建议初始出价=目标成本×1.2。'},
+  {id:'K002',title:'千川短视频素材黄金法则',cat:'AIGC创意',src:'运营团队',tags:['素材','千川','视频','CTR'],
+   content:'前3秒决定70%的完播率——必须有钩子（痛点/悬念/反常识）。15-30秒最佳长度。真人出镜CTR比图文高30%。单产品聚焦一个卖点。结尾必须有明确CTA（点击/购买/下载）。每周至少更新3套素材防疲劳。'},
+  {id:'K003',title:'教育行业广告合规要点(2026版)',cat:'投放政策',src:'审核中心',tags:['教育','合规','政策','审核'],
+   content:'学科类培训广告全面禁止。非学科需提供办学许可证+教师资格证。禁用"保过""包就业""提分100%"等绝对化用语。K12定向禁用年龄/年级标签。落地页必须标注价格和退费规则。违规处罚：首次警告+下架，再犯封停7-30天。'},
+  {id:'K004',title:'游戏买量ROI优化案例——杭州鲸灵',cat:'行业案例',src:'案例库',tags:['游戏','ROI','案例','素材'],
+   content:'客户：杭州鲸灵网络（手游发行商）。问题：ROI持续下降至1.3，CTR低于行业均值。方案：素材从游戏录屏→真人解说+KOL混剪(CTR 1.5%→2.8%)；定向基于付费画像(25-35男一线)；出价切oCPM(激活成本-40%)；落地页+社交proof(CVR 3%→5.5%)。结果：ROI从1.2→2.5。教训：关注LTV/CAC而非单纯消耗。'},
+  {id:'K005',title:'巨量搜索广告关键词四维覆盖法',cat:'搜广告变现',src:'引擎帮助中心',tags:['搜索','SEM','关键词','eCPM'],
+   content:'四维关键词策略：品牌词（品牌名+变体，必投）、品类词（行业通用词，抢量）、竞品词（竞品品牌名，截流）、场景词（"怎么选""哪个好"，高意图）。短语匹配为主，精确匹配补充高转化词。搜索流量CVR是信息流3-5倍，CPC高30-50%正常。OEM搜索广告eCPM基准：¥35-50。'},
+  {id:'K006',title:'穿山甲广告联盟eCPM优化指南',cat:'搜广告变现',src:'穿山甲官方',tags:['穿山甲','eCPM','变现','广告联盟'],
+   content:'穿山甲覆盖10万+APP。主流形式：开屏(eCPM最高¥60-80)、激励视频(¥40-60)、信息流(¥15-30)、插屏(¥10-20)。优化铁三角：填充率×展示率×eCPM。Waterfall+Bidding混合模式最大化收益。激励视频适合游戏，信息流适合内容APP。'},
+  {id:'K007',title:'2026 Q2 各行业广告投放 Benchmark',cat:'数据诊断',src:'巨量数据中心',tags:['benchmark','行业数据','CTR','ROI'],
+   content:'电商：CTR 2.1%, CVR 1.8%, CPA ¥45, ROI 2.6。游戏：CTR 2.8%, CVR 1.5%, CPA ¥38, ROI 2.2。教育：CTR 1.8%, CVR 2.5%, CPA ¥55, ROI 3.1。金融：CTR 1.5%, CVR 1.2%, CPA ¥120, ROI 1.8。AI/科技：CTR 2.3%, CVR 2.0%, CPA ¥65, ROI 2.9。本地生活：CTR 3.2%, CVR 4.5%, CPA ¥18, ROI 5.5。'},
+  {id:'K008',title:'AIGC 创意文案生成 Prompt 工程指南',cat:'AIGC创意',src:'AI Lab',tags:['AIGC','prompt','文案','生成'],
+   content:'千川文案Prompt模板："你是资深信息流优化师。产品：[X]，卖点：[Y]，目标人群：[Z]。生成5条短视频文案，每条15-30秒脚本。要求：前3秒钩子+痛点场景+产品解决+限时优惠+强CTA。风格：口语化、紧迫感、信任背书。"搜索广告标题Prompt："生成10个搜索广告标题，≤30字，含核心关键词，数字卖点前置，品牌名收尾。"'},
+  {id:'K009',title:'冷启动期投放策略指南',cat:'出价策略',src:'运营团队',tags:['冷启动','新账户','出价','预算'],
+   content:'新账户前3天黄金法则：预算设为日常1.5倍（给系统学习空间），放宽定向（兴趣→通投），至少5套素材同时跑，不频繁调整（每天≤2次）。学习期标志：成本波动大、量级不稳→正常，不要慌。3天后根据数据筛选：保留CTR>均值+成本达标计划，关停学习失败计划。'},
+  {id:'K010',title:'ROI 下降六维度拆解法',cat:'数据诊断',src:'数据分析团队',tags:['ROI','诊断','拆解','优化'],
+   content:'ROI=GMV/Cost。下降原因六维拆解：①CTR下降→素材疲劳/受众饱和→换新素材；②CVR下降→落地页/人群匹配→A/B测落地页；③CPA上升→竞价变激烈→调整出价策略；④客单价下降→促销过度→控制折扣；⑤复购率下降→用户运营→加强私域；⑥退货率上升→产品质量→排查售后。用数据而非直觉定位。'},
+  {id:'K011',title:'巨量千川 vs 巨量引擎 产品选型指南',cat:'产品文档',src:'商业化产品团队',tags:['千川','引擎','选型','对比'],
+   content:'千川：电商场景首选。强项是直播投流+短视频带货，闭环数据(下单/支付/ROI)。适合有店铺的电商客户。引擎：品牌+效果通吃。强项是品牌曝光+线索收集，覆盖全产品矩阵。适合B2B/教育/金融等非电商客户。搜索：高意图流量，CVR最高。穿山甲：流量广、成本低，适合跑量。建议组合：电商=千川+搜索，B2B=引擎+搜索，游戏=引擎+穿山甲。'},
+  {id:'K012',title:'AI 搜广告变现诊断方法论',cat:'搜广告变现',src:'搜索广告团队',tags:['搜索','变现','填充率','诊断'],
+   content:'搜索广告收入=Query量×填充率×eCPM。诊断三步：①看Query量趋势(是否下降→用户搜索行为变化)；②看填充率(广告主覆盖是否充足→扩大广告主池)；③看eCPM(竞价密度→提高匹配质量)。常见问题：填充率低=广告主不足，eCPM低=竞价不充分，CTR低=广告与搜索意图不匹配。每个问题对应不同优化手段。'},
+  {id:'K013',title:'广告素材合规自动检测规则',cat:'投放政策',src:'审核中心',tags:['合规','素材','检测','规则'],
+   content:'自动化检测要点：禁用词库(最/第一/国家级/唯一/顶级等绝对化用语)；行业特定词(教育-保过/医疗-治愈/金融-保本)；图片违规(色情/暴力/虚假标识/未授权logo)；落地页合规(价格标注/退费规则/资质展示)。每季度更新禁用词库。新素材上线前必须过机审+人审双重校验。'},
+  {id:'K014',title:'oCPM vs oCPC vs 自动出价 决策树',cat:'出价策略',src:'商业化产品团队',tags:['oCPM','oCPC','决策','出价'],
+   content:'出价策略选择决策树：①日转化≥20个→oCPM(成本最稳定)；②日转化<20但>5个→oCPC冷启动→积累数据→转oCPM；③日转化<5个且缺优化人力→自动出价(让系统学)；④严控成本±5%以内→规则出价+预算上限。oCPM学习期1-3天波动正常，不要中途关停。自动出价优势是省心，劣势是成本可能超预期20-30%。'},
+  {id:'K015',title:'电商大促期间投放策略',cat:'行业案例',src:'运营团队',tags:['电商','大促','618','双11','策略'],
+   content:'大促投放三步法：①预热期(T-7)：预算上调30%，人群包扩容至相似人群，素材预告+种草向；②爆发期(T-0~T+1)：预算拉满至日常3倍，oCPM出价上浮20-30%，所有已验证素材全量上线；③返场期(T+2~T+3)：预算降至1.5倍，素材更新为限时返场+库存告急。关键：大促前7天完成素材审核，避免临时被拒。'},
+  {id:'K016',title:'搜索广告填充率提升实操',cat:'搜广告变现',src:'搜索广告团队',tags:['搜索','填充率','实操'],
+   content:'填充率=有广告展示的搜索量/总搜索量。提升四步：①拓展广告主覆盖(降低准入门槛、自助开户)；②放宽匹配条件(短语→广泛匹配、增加否定词而非限制)；③提高出价竞争力(建议出价工具、行业benchmark透明化)；④优化广告质量(高CTR广告加权、低质广告降权)。目标：填充率从60%→85%。'},
+  {id:'K017',title:'AIGC 视频素材自动生成流程',cat:'AIGC创意',src:'AI Lab',tags:['AIGC','视频','自动生成','素材'],
+   content:'AIGC视频生成Pipeline：①输入产品信息+卖点+目标人群→②LLM生成脚本(15-30秒分镜)→③TTS语音合成(可选主播音色)→④视频素材匹配(素材库/生成)→⑤自动剪辑合成→⑥合规检测→⑦输出多版本。当前能力：单条视频生成<3分钟，支持9:16竖屏/16:9横屏，分辨率1080p。最佳实践：先批量生成10条→人工精选3条→A/B测试→保留最优。'},
+  {id:'K018',title:'穿山甲 vs 腾讯广告 流量对比',cat:'产品文档',src:'商业分析团队',tags:['穿山甲','腾讯广告','对比','流量'],
+   content:'穿山甲优势：DAU 8亿+(抖音+头条系)，eCPM中高，支持Waterfall+Bidding混合。腾讯广告优势：微信生态(朋友圈+公众号+小程序)，社交数据丰富，适合品牌+私域。选择建议：游戏→穿山甲(流量广、成本低)；电商→千川(闭环数据)；品牌→腾讯(社交裂变)；工具类APP→穿山甲(变现效率高)。'},
+  {id:'K019',title:'广告投放异常排查 Checklist',cat:'数据诊断',src:'运营团队',tags:['异常','排查','checklist','诊断'],
+   content:'消耗骤降排查：①账户余额是否充足；②计划/创意是否被拒审；③出价是否低于竞价底价；④定向是否过窄；⑤时段设置是否错误。消耗暴涨排查：①是否有爆量素材(正常→加预算)；②是否有恶意点击(异常→排查+屏蔽)；③出价策略是否异常。ROI骤降排查：见K010六维拆解法。'},
+  {id:'K020',title:'2026 广告行业趋势展望',cat:'行业案例',src:'商业分析团队',tags:['趋势','2026','行业','展望'],
+   content:'五大趋势：①AIGC素材占比超60%(人工→AI辅助→AI主导)；②搜索广告增速30%+(用户主动搜索习惯养成)；③直播投流ROI持续优化(实时数据闭环)；④隐私计算下的精准投放(联邦学习+多方安全计算)；⑤多模态广告(视频+AR+可购物广告)。建议：今年重点布局搜索广告+AIGC素材能力。'}
+];
 
-  const filtered = query
-    ? mockResults.filter(r => r.title.includes(query) || r.content.includes(query) || r.category.includes(query))
-    : mockResults;
+function renderKnowledgeResults(query){
+  var catFilter=''; if(query) query=query.toLowerCase();
+  // 检查是否是分类关键词
+  var catMap={'投放政策':'投放政策','AIGC创意':'AIGC创意','搜广告变现':'搜广告变现','出价策略':'出价策略','行业案例':'行业案例','产品文档':'产品文档','数据诊断':'数据诊断'};
+  if(query&&catMap[query]){catFilter=query;query=''}
+  var container=document.getElementById('knowledge-results');
+  if(!container)return;
+  var results=KNOWLEDGE_BASE.filter(function(r){
+    if(catFilter&&r.cat!==catFilter)return false;
+    if(!query)return true;
+    return r.title.toLowerCase().indexOf(query)>-1||r.content.toLowerCase().indexOf(query)>-1||r.tags.some(function(t){return t.toLowerCase().indexOf(query)>-1})||r.cat.indexOf(query)>-1;
+  });
+  if(!results.length){container.innerHTML='<p style="color:var(--text3);text-align:center;padding:40px">未找到匹配的知识条目</p>';return}
+  container.innerHTML=results.map(function(r){return'<div class="k-card" onclick="showKnowledgeDetail(\''+r.id+'\')"><h4>'+r.title+'</h4><p>'+r.content+'</p><div class="k-meta"><span>📂 '+r.cat+'</span><span>📖 '+r.src+'</span><span>'+r.tags.map(function(t){return'<code>#'+t+'</code>'}).join(' ')+'</span></div></div>'}).join('');
+}
 
-  container.innerHTML = filtered.map(r => `
-    <div class="knowledge-item">
-      <h4>${r.title}</h4>
-      <p>${r.content}</p>
-      <div class="meta">
-        <span>📂 ${r.category}</span>
-        <span>📖 ${r.source}</span>
-      </div>
-    </div>
-  `).join('');
+function showKnowledgeDetail(id){
+  var r=KNOWLEDGE_BASE.find(function(k){return k.id===id});
+  if(!r)return;
+  openDrill(r.title,'<div class="drill-section"><div style="display:flex;gap:8px;margin-bottom:12px"><span style="background:var(--brand-light);color:var(--brand);font-size:11px;padding:3px 10px;border-radius:12px">'+r.cat+'</span><span style="color:var(--text3);font-size:11px">来源: '+r.src+'</span></div><p style="font-size:14px;line-height:1.8;white-space:pre-wrap">'+r.content+'</p><div style="margin-top:16px">'+r.tags.map(function(t){return'<code style="margin:2px;padding:3px 8px;background:#F1F5F9;border-radius:4px;font-size:11px">#'+t+'</code>'}).join(' ')+'</div></div>');
 }
 
 // 知识库搜索事件
-document.getElementById('knowledge-search-input')?.addEventListener('input', (e) => {
-  renderKnowledgeResults(e.target.value);
-});
+document.getElementById('knowledge-search-input')&&document.getElementById('knowledge-search-input').addEventListener('input',function(e){renderKnowledgeResults(e.target.value)});
 
-// 分类标签点击
-document.querySelectorAll('.knowledge-categories .tag').forEach(tag => {
-  tag.addEventListener('click', function () {
-    document.querySelectorAll('.knowledge-categories .tag').forEach(t => t.classList.remove('active'));
-    this.classList.add('active');
-    const cat = this.textContent;
-    if (cat === '全部') {
-      renderKnowledgeResults('');
-    } else {
-      renderKnowledgeResults(cat);
-    }
-  });
-});
+// 分类点击 — 使用知识库侧边栏的 k-cat 按钮
+document.querySelectorAll('.k-cat').forEach(function(el){el.addEventListener('click',function(){document.querySelectorAll('.k-cat').forEach(function(e){e.classList.remove('active')});this.classList.add('active');renderKnowledgeResults(this.textContent==='全部'?'':this.textContent)})});
 
 // ============================================================
 // 数据看板 — 生产级模拟数据 + SVG 图表
