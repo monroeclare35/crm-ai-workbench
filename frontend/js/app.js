@@ -250,7 +250,7 @@ async function sendViaAgentAPI(message, apiUrl) {
     appendMessage('system', '[Agent Error] ' + error.message + '\n请确认 Agent 后端已启动 (python server.py)');
   } finally {
     setAgentStatus('idle');
-    state.streaming = false;
+    state.isStreaming = false;
     sendBtn.disabled = false;
     chatLoading.classList.add('hidden');
     chatInput.focus();
@@ -283,8 +283,11 @@ async function sendMessage() {
   var message = chatInput.value.trim();
   if (!message || state.isStreaming) return;
 
-  if (!API_CONFIG.apiKey) {
-    appendMessage('system', '⚠️ 请先点击左下角 ⚙️ 设置 API Key（然后选 DeepSeek 预设）');
+  var isAgent = API_CONFIG.isAgent === true;
+
+  // Direct API模式需要Key
+  if (!isAgent && !API_CONFIG.apiKey) {
+    appendMessage('system', '请先点左下角齿轮设置API Key，或切换到Agent SDK模式');
     return;
   }
 
@@ -292,23 +295,20 @@ async function sendMessage() {
   chatInput.value = '';
   chatInput.style.height = 'auto';
   sendBtn.disabled = true;
-  // Agent 状态切换
   setAgentStatus('working');
-  // 显示工作过程
   simulateAgentTrace(message);
 
   appendMessage('user', message);
   scrollToBottom();
 
-  var isAgent = API_CONFIG.isAgent === true;
-  var apiUrl = API_CONFIG.apiUrl || (isAgent ? '/api/v1/chat/stream' : 'https://api.deepseek.com/v1/chat/completions');
-  var model = API_CONFIG.model || 'deepseek-v4-pro';
-
   // Agent模式：调用 Claude Agent SDK 后端
   if (isAgent) {
-    await sendViaAgentAPI(message, apiUrl);
+    await sendViaAgentAPI(message, '/api/v1/chat/stream');
     return;
   }
+
+  var apiUrl = API_CONFIG.apiUrl || 'https://api.deepseek.com/v1/chat/completions';
+  var model = API_CONFIG.model || 'deepseek-v4-pro';
 
   // System Prompt — 广告AI策略助手 (含客户数据)
   var systemPrompt = '你是抖音集团广告AI策略助手，服务于华东区广告策略团队。\n\n'+
