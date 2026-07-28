@@ -166,11 +166,31 @@ function initChat() {
   });
 }
 
+// Agent 状态控制
+function setAgentStatus(status){var dot=document.querySelector('.agent-dot');var txt=document.getElementById('agent-status-text');if(status==='working'){dot.classList.add('working');txt.textContent='工作中...'}else{dot.classList.remove('working');txt.textContent='就绪'}}
+
+// 模拟 Agent 工作步骤
+function simulateAgentTrace(msg){
+  var trace=document.getElementById('agent-trace');
+  var steps=document.getElementById('trace-steps');
+  trace.classList.remove('hidden'); steps.innerHTML='';
+  // 根据消息内容推断步骤
+  var plan=[{icon:'💭',type:'think',text:'分析意图: '+msg.substring(0,40)+(msg.length>40?'...':'')},{icon:'🔍',type:'tool',text:'检索相关知识库和行业数据'}];
+  if(msg.indexOf('ROI')>-1||msg.indexOf('诊断')>-1||msg.indexOf('拆解')>-1){plan.push({icon:'📊',type:'tool',text:'调用 ad_platform__query_metrics 获取消耗/ROI/CTR数据'});plan.push({icon:'🧮',type:'think',text:'多维度对比分析: 素材/出价/定向拆解'});}
+  else if(msg.indexOf('文案')>-1||msg.indexOf('生成')>-1||msg.indexOf('创意')>-1){plan.push({icon:'🎨',type:'tool',text:'调用 creative_library__search_templates 获取行业TOP模板'});plan.push({icon:'✍️',type:'think',text:'按产品线差异化生成文案'});}
+  else if(msg.indexOf('搜索')>-1||msg.indexOf('填充率')>-1||msg.indexOf('eCPM')>-1){plan.push({icon:'🔍',type:'tool',text:'调用 search_ad__query_fill_rate 和 search_ad__query_ecpm'});}
+  else if(msg.indexOf('周报')>-1||msg.indexOf('报告')>-1){plan.push({icon:'📋',type:'tool',text:'调用 ad_platform__query_metrics 批量拉数据'});plan.push({icon:'🧮',type:'think',text:'异常检测 + 排名 + 趋势分析'});}
+  else{plan.push({icon:'🧠',type:'think',text:'综合分析中...'});}
+  plan.push({icon:'✔️',type:'done',text:'生成结果'});
+  plan.forEach(function(s,i){setTimeout(function(){var el=document.createElement('div');el.className='trace-step '+s.type;el.innerHTML='<span class="step-icon">'+s.icon+'</span><span class="step-body">'+s.text+'</span><span class="step-time">'+(i*0.2).toFixed(1)+'s</span>';steps.appendChild(el);steps.scrollTop=steps.scrollHeight;if(i===plan.length-1)setTimeout(function(){document.getElementById('agent-trace').classList.add('hidden')},1500)},i*350});
+}
+
+function toggleTrace(){var s=document.getElementById('trace-steps');var btn=document.getElementById('trace-collapse');if(s.style.display==='none'){s.style.display='';btn.textContent='收起 ▴'}else{s.style.display='none';btn.textContent='展开 ▾'}}
+
 async function sendMessage() {
   var message = chatInput.value.trim();
   if (!message || state.isStreaming) return;
 
-  // 检查API配置
   if (!API_CONFIG.apiKey) {
     appendMessage('system', '⚠️ 请先点击左下角 ⚙️ 设置 API Key（然后选 DeepSeek 预设）');
     return;
@@ -180,7 +200,10 @@ async function sendMessage() {
   chatInput.value = '';
   chatInput.style.height = 'auto';
   sendBtn.disabled = true;
-  chatLoading.classList.remove('hidden');
+  // Agent 状态切换
+  setAgentStatus('working');
+  // 显示工作过程
+  simulateAgentTrace(message);
 
   appendMessage('user', message);
   scrollToBottom();
@@ -263,6 +286,7 @@ async function sendMessage() {
   } catch (error) {
     appendMessage('system', '❌ ' + error.message + '\n\n请检查：\n1. 点击 ⚙️ 设置 → 选 DeepSeek 预设 → 填 API Key → 保存\n2. API Key 格式应为 sk-...\n3. 确认网络能访问 api.deepseek.com');
   } finally {
+    setAgentStatus('idle');
     state.isStreaming = false;
     sendBtn.disabled = false;
     chatLoading.classList.add('hidden');
@@ -527,6 +551,87 @@ function renderDashboard(){
 
 function switchDbPeriod(p,el){DB.period=p;document.querySelectorAll('.db-filter').forEach(function(f){f.classList.remove('active')});el.classList.add('active');renderDashboard()}
 function switchDbRegion(r){DB.region=r;renderDashboard()}
+
+// ============================================================
+// Drill-down — 每个看板板块点进去的明细
+// ============================================================
+
+function openDrill(title,html){
+  document.getElementById('drill-title').textContent=title;
+  document.getElementById('drill-body').innerHTML=html;
+  document.getElementById('drill-overlay').classList.remove('hidden');
+}
+function closeDrill(e){if(e&&e.target!==document.getElementById('drill-overlay'))return;document.getElementById('drill-overlay').classList.add('hidden')}
+
+// 点击 KPI 卡片
+function drillKPI(type){
+  var data=genDbData();
+  if(type==='cost')openDrill('消耗明细 — '+DB.region,
+    '<div class="drill-metric-row"><div class="drill-metric"><span class="dm-label">总消耗</span><span class="dm-val">¥'+(data.total>9999?Math.round(data.total/10000)+'万':data.total.toLocaleString())+'</span></div><div class="drill-metric"><span class="dm-label">日均消耗</span><span class="dm-val">¥'+Math.round(data.total/(DB.period==='7d'?7:30)/10000)+'万</span></div><div class="drill-metric"><span class="dm-label">环比变化</span><span class="dm-val" style="color:'+(data.wowPct>=0?'var(--success)':'var(--danger)')+'">'+(data.wowPct>=0?'+':'')+data.wowPct+'%</span></div></div>'+
+    '<div class="drill-section"><h4>日度消耗趋势</h4><table><thead><tr><th>日期</th><th>消耗 (万)</th><th>环比前日</th><th>ROI</th></tr></thead><tbody>'+data.trend.map(function(d,i){var prev=data.trend[i-1];var chg=prev?Math.round((d.value-prev.value)/prev.value*1000)/10:0;return'<tr><td>'+d.date+'</td><td style="font-weight:600">¥'+Math.round(d.value/10000)+'万</td><td style="color:'+(chg>=0?'var(--success)':'var(--danger)')+'">'+(chg>=0?'+':'')+chg+'%</td><td>'+d.roi+'</td></tr>'}).join('')+'</tbody></table></div>');
+  else if(type==='roi')openDrill('ROI 分析 — '+DB.region,
+    '<div class="drill-metric-row"><div class="drill-metric"><span class="dm-label">平均 ROI</span><span class="dm-val">'+data.roiAvg+'</span></div><div class="drill-metric"><span class="dm-label">最高 ROI</span><span class="dm-val" style="color:var(--success)">'+Math.round((data.roiAvg*1.8)*100)/100+'</span></div><div class="drill-metric"><span class="dm-label">最低 ROI</span><span class="dm-val" style="color:var(--danger)">'+Math.round((data.roiAvg*0.4)*100)/100+'</span></div></div>'+
+    '<div class="drill-section"><h4>ROI 分层分析</h4><table><thead><tr><th>ROI区间</th><th>账户数</th><th>消耗占比</th><th>状态</th></tr></thead><tbody><tr><td>> 3.0</td><td>'+Math.round(data.activeCount*0.22)+'</td><td>28%</td><td style="color:var(--success)">优秀</td></tr><tr><td>2.0 - 3.0</td><td>'+Math.round(data.activeCount*0.38)+'</td><td>41%</td><td style="color:var(--success)">良好</td></tr><tr><td>1.0 - 2.0</td><td>'+Math.round(data.activeCount*0.28)+'</td><td>22%</td><td style="color:var(--warning)">关注</td></tr><tr><td>< 1.0</td><td>'+Math.round(data.activeCount*0.12)+'</td><td>9%</td><td style="color:var(--danger)">警告</td></tr></tbody></table></div>');
+  else if(type==='active')openDrill('活跃账户明细 — '+DB.region,
+    '<div class="drill-section"><h4>活跃账户增长趋势</h4><table><thead><tr><th>周</th><th>活跃账户</th><th>新增</th><th>流失</th><th>净增</th></tr></thead><tbody><tr><td>W27</td><td>'+(data.activeCount-9)+'</td><td>+14</td><td>-6</td><td style="color:var(--success)">+8</td></tr><tr><td>W28</td><td>'+(data.activeCount-5)+'</td><td>+11</td><td>-7</td><td style="color:var(--success)">+4</td></tr><tr><td>W29</td><td>'+(data.activeCount-2)+'</td><td>+8</td><td>-6</td><td style="color:var(--success)">+2</td></tr><tr style="font-weight:600"><td>W30 (当前)</td><td>'+data.activeCount+'</td><td>+11</td><td>-8</td><td style="color:var(--success)">+3</td></tr></tbody></table></div>');
+  else if(type==='alert')openDrill('异常告警详情',
+    '<div class="drill-section">'+data.anomalies.map(function(a,i){return'<div style="background:'+(a.lvl==='danger'?'var(--danger-bg)':'var(--warning-bg)')+';border-left:3px solid '+(a.lvl==='danger'?'var(--danger)':'var(--warning)')+';padding:12px 16px;border-radius:4px;margin-bottom:8px"><strong>#'+(i+1)+' '+a.name+'</strong><br><span style="font-size:12px;color:var(--text2)">'+a.reason+'</span><br><span style="font-size:11px;color:var(--text3);margin-top:4px;display:block">建议: '+(a.lvl==='danger'?'立即联系客户, 48h内出方案':'本周内跟进检查, 发送优化建议')+'</span></div>'}).join('')+'</div>');
+}
+
+// 点击图表 → 看对应分类的明细
+function drillIndustry(name){
+  var data=genDbData(), ind=data.industries.find(function(d){return d.n===name})||data.industries[0];
+  var actCount=Math.round(data.activeCount*(ind.v/100));
+  openDrill(ind.n+'行业 · 投放详情','<div class="drill-metric-row"><div class="drill-metric"><span class="dm-label">行业消耗占比</span><span class="dm-val">'+ind.v+'%</span></div><div class="drill-metric"><span class="dm-label">活跃账户</span><span class="dm-val">'+actCount+'</span></div><div class="drill-metric"><span class="dm-label">行业 ROI 均值</span><span class="dm-val">'+Math.round((data.roiAvg*(0.78+Math.random()*0.44))*100)/100+'</span></div></div><div class="drill-section"><h4>子行业分布</h4><table><thead><tr><th>子行业</th><th>消耗占比</th><th>ROI</th><th>趋势</th></tr></thead><tbody>'+['美妆个护','综合电商','直播电商','跨境电商'].map(function(s,i){return'<tr><td style="font-weight:500">'+s+'</td><td>'+Math.round(ind.v/(i+1.5))+'%</td><td>'+Math.round((2+Math.random()*2.5)*100)/100+'</td><td style="color:'+(i<2?'var(--success)':'var(--text2)')+'">'+(i<2?'↑ 增长':'→ 平稳')+'</td></tr>'}).join('')+'</tbody></table></div>');
+}
+
+function drillProduct(name){
+  var data=genDbData(), prod=data.products.find(function(d){return d.n===name})||data.products[0];
+  openDrill(name+' · 投放详情','<div class="drill-metric-row"><div class="drill-metric"><span class="dm-label">消耗占比</span><span class="dm-val">'+prod.v+'%</span></div><div class="drill-metric"><span class="dm-label">平均 CTR</span><span class="dm-val">'+Math.round((1.8+Math.random()*2.2)*10)/10+'%</span></div><div class="drill-metric"><span class="dm-label">平均 CVR</span><span class="dm-val">'+Math.round((1+Math.random()*3)*10)/10+'%</span></div></div><div class="drill-section"><h4>'+name+' 投放策略建议</h4><table><thead><tr><th>维度</th><th>当前值</th><th>行业基准</th><th>建议</th></tr></thead><tbody><tr><td>CTR</td><td>'+Math.round((2+Math.random()*1.2)*10)/10+'%</td><td>2.35%</td><td>'+(Math.random()>0.5?'素材更新频率提升至每周3次':'前3秒钩子优化')+'</td></tr><tr><td>CVR</td><td>'+Math.round((1.5+Math.random()*2)*10)/10+'%</td><td>1.8%</td><td>'+(Math.random()>0.5?'落地页加载速度优化':'增加社交proof模块')+'</td></tr><tr><td>eCPM</td><td>¥'+Math.round(25+Math.random()*30)+'</td><td>¥38</td><td>竞争度中等，有提价空间</td></tr></tbody></table></div>');
+}
+
+function drillAccount(name){
+  openDrill(name+' · 账户详情','<div class="drill-metric-row"><div class="drill-metric"><span class="dm-label">近30天消耗</span><span class="dm-val">¥'+Math.round((50+Math.random()*200)*100)/100+'万</span></div><div class="drill-metric"><span class="dm-label">当前 ROI</span><span class="dm-val">'+Math.round((1.5+Math.random()*3)*100)/100+'</span></div><div class="drill-metric"><span class="dm-label">CTR</span><span class="dm-val">'+Math.round((1.8+Math.random()*1.8)*10)/10+'%</span></div></div><div class="drill-section"><h4>投放产品分布</h4><table><thead><tr><th>产品</th><th>消耗占比</th><th>ROI</th><th>状态</th></tr></thead><tbody><tr><td>千川</td><td>46%</td><td>'+Math.round((1.8+Math.random()*2.5)*100)/100+'</td><td style="color:var(--success)">正常</td></tr><tr><td>引擎</td><td>32%</td><td>'+Math.round((1.5+Math.random()*2)*100)/100+'</td><td style="color:var(--success)">正常</td></tr><tr><td>搜索</td><td>14%</td><td>'+Math.round((2+Math.random()*3)*100)/100+'</td><td style="color:var(--success)">正常</td></tr><tr><td>穿山甲</td><td>8%</td><td>'+Math.round((1+Math.random()*1.5)*100)/100+'</td><td style="color:var(--warning)">待优化</td></tr></tbody></table></div><div class="drill-section"><h4>最近操作记录</h4><table><thead><tr><th>时间</th><th>操作</th><th>操作人</th></tr></thead><tbody><tr><td>07-29 14:22</td><td>新建千川计划(激活-自动出价)</td><td>张三</td></tr><tr><td>07-28 10:05</td><td>更新素材×3</td><td>张三</td></tr><tr><td>07-27 16:30</td><td>预算调整 ¥500→¥800/天</td><td>张三</td></tr></tbody></table></div>');
+}
+
+// 让 KPI 卡片可点击
+function bindDrillClicks(){
+  var kpis=document.querySelectorAll('.db-kpi');
+  if(kpis.length>=6){
+    kpis[0].onclick=function(){drillKPI('cost')};
+    kpis[1].onclick=function(){drillKPI('cost')};
+    kpis[2].onclick=function(){drillKPI('roi')};
+    kpis[3].onclick=function(){drillKPI('active')};
+    kpis[4].onclick=function(){drillKPI('roi')};
+    kpis[5].onclick=function(){drillKPI('alert')};
+  }
+}
+
+// 在 renderDashboard 末尾绑定
+var _origRenderDashboard=renderDashboard;
+renderDashboard=function(){
+  _origRenderDashboard();
+  // 行业柱图点击
+  setTimeout(function(){
+    var indSvg=document.querySelector('#chart-industry svg');
+    if(indSvg) indSvg.style.cursor='pointer';
+    var indRects=document.querySelectorAll('#chart-industry rect');
+    var indLabels=['电商','游戏','教育','AI/科技','本地生活','金融'];
+    indRects.forEach(function(r,i){r.onclick=function(){drillIndustry(indLabels[i]||'电商')}});
+    // 产品饼图点击
+    var prodPaths=document.querySelectorAll('#chart-product path');
+    var prodLabels=['千川','引擎','搜索','穿山甲'];
+    prodPaths.forEach(function(p,i){p.style.cursor='pointer';p.onclick=function(){drillProduct(prodLabels[i]||'千川')}});
+    // TOP10 点击
+    var topRows=document.querySelectorAll('#table-top10 tr');
+    topRows.forEach(function(r){r.onclick=function(){var n=r.querySelector('td:nth-child(2)');if(n)drillAccount(n.textContent)}});
+    // 异常点击
+    var anomRows=document.querySelectorAll('#table-anomaly tr');
+    anomRows.forEach(function(r){r.onclick=function(){var n=r.querySelector('td:nth-child(2)');if(n)drillAccount(n.textContent)}});
+    // KPI 绑定
+    bindDrillClicks();
+  },100);
+};
 
 // ============================================================
 // 初始化
