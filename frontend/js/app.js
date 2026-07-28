@@ -11,19 +11,26 @@ const S = { view:'chat', userId:'dev-sales-001', streaming:false };
 // ============================================================
 // Navigation
 // ============================================================
-document.querySelectorAll('.nav-item[data-view]').forEach(el=>{
-  el.addEventListener('click',e=>{e.preventDefault();switchView(el.dataset.view)})
-});
+function initNav(){
+  document.querySelectorAll('.nav-item[data-view]').forEach(el=>{
+    el.addEventListener('click',function(e){e.preventDefault();switchView(this.dataset.view)})
+  });
+}
 function switchView(v){
+  if(S.streaming) return;
   S.view=v;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  document.querySelector(`.nav-item[data-view="${v}"]`)?.classList.add('active');
+  const targetNav=document.querySelector('.nav-item[data-view="'+v+'"]');
+  if(targetNav) targetNav.classList.add('active');
   document.querySelectorAll('.view').forEach(vw=>vw.classList.remove('active'));
-  document.getElementById(`view-${v}`)?.classList.add('active');
-  if(v==='dashboard') renderCharts();
-  if(v==='customers') renderCustomerTable();
-  if(v==='reports') renderReports();
-  if(v==='knowledge') renderKnowledge();
+  const targetView=document.getElementById('view-'+v);
+  if(targetView) targetView.classList.add('active');
+  try{
+    if(v==='dashboard') renderCharts();
+    if(v==='customers') renderCustomerTable();
+    if(v==='reports') renderReports();
+    if(v==='knowledge') renderKnowledge();
+  }catch(e){console.error('switchView render error:',e)}
 }
 
 // ============================================================
@@ -35,57 +42,48 @@ function sparkSVG(data,color,width=60,height=32){
 }
 
 // ============================================================
-// Dashboard Charts (SVG)
+// Dashboard Charts (SVG) — 防御式渲染
 // ============================================================
 function renderCharts(){
-  const cost=[82,88,78,92,85,95,90,98,102,96,108,105,112,118,115,125,120,128,130,122,135,128,140,145,138,148,142,155,150,160];
-  const roi=[3.1,2.9,3.0,3.2,3.0,2.8,2.9,3.1,2.7,2.8,2.6,2.9,2.8,2.7,2.9,2.8,2.6,2.82];
-  const active=[38,39,38,40,41,42,41,43,42,44,43,45,44,46,45,47,46,47];
-  document.getElementById('spark-cost').innerHTML=sparkSVG(cost,'#2563EB');
-  document.getElementById('spark-roi').innerHTML=sparkSVG(roi,'#059669',60,32);
-  document.getElementById('spark-active').innerHTML=sparkSVG(active,'#0284C7',60,32);
+  try{
+    // Mini sparklines
+    const cost=[82,88,78,92,85,95,90,98,102,96,108,105,112,118,115,125,120,128,130,122,135,128,140,145,138,148,142,155,150,160];
+    const roi=[3.1,2.9,3.0,3.2,3.0,2.8,2.9,3.1,2.7,2.8,2.6,2.9,2.8,2.7,2.9,2.8,2.6,2.82];
+    const active=[38,39,38,40,41,42,41,43,42,44,43,45,44,46,45,47,46,47];
+    var el=document.getElementById('spark-cost'); if(el) el.innerHTML=sparkSVG(cost,'#2563EB');
+    el=document.getElementById('spark-roi'); if(el) el.innerHTML=sparkSVG(roi,'#059669',60,32);
+    el=document.getElementById('spark-active'); if(el) el.innerHTML=sparkSVG(active,'#0284C7',60,32);
 
-  // Trend chart
-  const trendEl=document.getElementById('chart-trend');
-  if(trendEl){
-    const w=600,h=220,pad=40;
-    const pts=cost.map((v,i)=>`${pad+(i/(cost.length-1))*(w-2*pad)},${h-pad-(v/Math.max(...cost))*(h-2*pad)}`);
-    const area=pts.join(' ')+` ${pad+(cost.length-1)/(cost.length-1)*(w-2*pad)},${h-pad} ${pad},${h-pad}`;
-    trendEl.innerHTML=`<svg viewBox="0 0 ${w} ${h}" width="100%" height="220">
-      <defs><linearGradient id="tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2563EB" stop-opacity="0.15"/><stop offset="100%" stop-color="#2563EB" stop-opacity="0"/></linearGradient></defs>
-      <polygon points="${area}" fill="url(#tg)"/>
-      <polyline points="${pts.join(' ')}" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      ${[0,.25,.5,.75,1].map(x=>`<line x1="${pad}" y1="${h-pad-x*(h-2*pad)}" x2="${pad+(cost.length-1)/(cost.length-1)*(w-2*pad)}" y2="${h-pad-x*(h-2*pad)}" stroke="#E4E7ED" stroke-width="0.5" stroke-dasharray="4,4"/>`).join('')}
-    </svg>`;
-  }
+    // Trend chart
+    var trendEl=document.getElementById('chart-trend');
+    if(trendEl){
+      var w=600,h=220,pad=40;
+      var maxV=Math.max.apply(null,cost);
+      var pts=cost.map(function(v,i){return (pad+(i/(cost.length-1))*(w-2*pad))+','+(h-pad-(v/maxV)*(h-2*pad))}).join(' ');
+      var area=pts+' '+(pad+(cost.length-1)/(cost.length-1)*(w-2*pad))+','+(h-pad)+' '+pad+','+(h-pad);
+      var gridLines=[0,.25,.5,.75,1].map(function(x){return '<line x1="'+pad+'" y1="'+(h-pad-x*(h-2*pad))+'" x2="'+(pad+(cost.length-1)/(cost.length-1)*(w-2*pad))+'" y2="'+(h-pad-x*(h-2*pad))+'" stroke="#E4E7ED" stroke-width="0.5" stroke-dasharray="4,4"/>'}).join('');
+      trendEl.innerHTML='<svg viewBox="0 0 '+w+' '+h+'" width="100%" height="220"><defs><linearGradient id="tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2563EB" stop-opacity="0.15"/><stop offset="100%" stop-color="#2563EB" stop-opacity="0"/></linearGradient></defs><polygon points="'+area+'" fill="url(#tg)"/><polyline points="'+pts+'" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+gridLines+'</svg>';
+    }
 
-  // Health pie
-  const healthEl=document.getElementById('chart-health');
-  if(healthEl){
-    const total=47,healthy=32,warning=10,risk=5;
-    const cx=100,cy=110,r=80;
-    const arcs=[{v:healthy,c:'#059669'},{v:warning,c:'#D97706'},{v:risk,c:'#DC2626'}];
-    let ang=0;
-    const slices=arcs.map(a=>{const pct=a.v/total,a0=ang,sw=a.v/total*2*Math.PI;ang+=sw;return `<path d="${describeArc(cx,cy,r,a0,ang)}" fill="${a.c}" opacity="0.85"/>`}).join('');
-    healthEl.innerHTML=`<svg viewBox="0 0 200 220" width="100%" height="220">
-      ${slices}
-      <text x="${cx}" y="${cy-6}" text-anchor="middle" font-size="28" font-weight="700" fill="#1A1D26">${total}</text>
-      <text x="${cx}" y="${cy+16}" text-anchor="middle" font-size="11" fill="#5F6675">客户总数</text>
-    </svg>
-    <div style="display:flex;gap:12px;justify-content:center;margin-top:8px;font-size:11.5px;">
-      <span style="color:#059669">● 健康 ${healthy}</span><span style="color:#D97706">● 关注 ${warning}</span><span style="color:#DC2626">● 风险 ${risk}</span>
-    </div>`;
-  }
+    // Health pie
+    var healthEl=document.getElementById('chart-health');
+    if(healthEl){
+      var total=47,healthy=32,warning=10,risk=5,cx=100,cy=110,r=80;
+      var arcs=[{v:healthy,c:'#059669'},{v:warning,c:'#D97706'},{v:risk,c:'#DC2626'}];
+      var ang=0,slices='';
+      for(var i=0;i<arcs.length;i++){var a=arcs[i],pct=a.v/total,a0=ang,sw=pct*2*Math.PI;ang+=sw;slices+='<path d="'+describeArc(cx,cy,r,a0,ang)+'" fill="'+a.c+'" opacity="0.85"/>'}
+      healthEl.innerHTML='<svg viewBox="0 0 200 220" width="100%" height="220">'+slices+'<text x="'+cx+'" y="'+(cy-6)+'" text-anchor="middle" font-size="28" font-weight="700" fill="#1A1D26">'+total+'</text><text x="'+cx+'" y="'+(cy+16)+'" text-anchor="middle" font-size="11" fill="#5F6675">客户总数</text></svg><div style="display:flex;gap:12px;justify-content:center;margin-top:8px;font-size:11.5px"><span style="color:#059669">● 健康 '+healthy+'</span><span style="color:#D97706">● 关注 '+warning+'</span><span style="color:#DC2626">● 风险 '+risk+'</span></div>';
+    }
 
-  // Industry bar
-  const industryEl=document.getElementById('chart-industry');
-  if(industryEl){
-    const data=[{l:'电商',v:42,c:'#2563EB'},{l:'游戏',v:28,c:'#7C3AED'},{l:'教育',v:15,c:'#059669'},{l:'AI/科技',v:10,c:'#F59E0B'},{l:'其他',v:5,c:'#6B7280'}];
-    const maxW=160,bh=26,gap=10;
-    industryEl.innerHTML=`<svg viewBox="0 0 200 180" width="100%" height="220">
-      ${data.map((d,i)=>`<rect x="20" y="${i*(bh+gap)+10}" width="${d.v/maxW*160}" height="${bh}" rx="5" fill="${d.c}" opacity="0.85"/><text x="${d.v/maxW*160+26}" y="${i*(bh+gap)+10+bh/2+4}" font-size="11" fill="#1A1D26" font-weight="500">${d.l} ${d.v}%</text>`).join('')}
-    </svg>`;
-  }
+    // Industry bars
+    var indEl=document.getElementById('chart-industry');
+    if(indEl){
+      var bars=[{l:'电商',v:42,c:'#2563EB'},{l:'游戏',v:28,c:'#7C3AED'},{l:'教育',v:15,c:'#059669'},{l:'AI/科技',v:10,c:'#F59E0B'},{l:'其他',v:5,c:'#6B7280'}];
+      var mxW=160,bh=26,gap=10,barsHTML='';
+      for(var j=0;j<bars.length;j++){var d=bars[j];barsHTML+='<rect x="20" y="'+(j*(bh+gap)+10)+'" width="'+(d.v/mxW*160)+'" height="'+bh+'" rx="5" fill="'+d.c+'" opacity="0.85"/><text x="'+(d.v/mxW*160+26)+'" y="'+(j*(bh+gap)+10+bh/2+4)+'" font-size="11" fill="#1A1D26" font-weight="500">'+d.l+' '+d.v+'%</text>'}
+      indEl.innerHTML='<svg viewBox="0 0 200 180" width="100%" height="220">'+barsHTML+'</svg>';
+    }
+  }catch(e){console.error('renderCharts error:',e)}
 }
 
 function describeArc(cx,cy,r,start,end){
@@ -236,5 +234,11 @@ function md(t){
 // ============================================================
 // Init
 // ============================================================
-function init(){initChat();renderCustomerTable();renderReports();renderKnowledge();renderCharts();}
+function init(){
+  initNav();
+  initChat();
+  try{renderCustomerTable()}catch(e){}
+  try{renderReports()}catch(e){}
+  try{renderKnowledge()}catch(e){}
+}
 document.addEventListener('DOMContentLoaded',init);
