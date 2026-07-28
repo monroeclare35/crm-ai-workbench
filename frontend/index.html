@@ -11,6 +11,18 @@
 </head>
 <body>
 
+<!-- 导航逻辑内嵌：零依赖，JS加载失败也能用 -->
+<script>
+window.switchView=function(v){
+  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active')});
+  var nav=document.querySelector('.nav-item[data-view="'+v+'"]');
+  if(nav) nav.classList.add('active');
+  document.querySelectorAll('.view').forEach(function(vw){vw.style.display='none'});
+  var target=document.getElementById('view-'+v);
+  if(target) target.style.display='flex';
+};
+</script>
+
 <!-- ===== 侧边栏 ===== -->
 <aside id="sidebar">
   <div class="sidebar-top">
