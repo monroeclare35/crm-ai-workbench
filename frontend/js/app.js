@@ -125,6 +125,7 @@ function switchView(view) {
   if (viewEl) viewEl.classList.add('active');
 
   if (view === 'dashboard') renderDashboard();
+  if (view === 'reports') renderReports();
   if (view === 'customers') renderCustomerCards();
   if (view === 'knowledge') renderKnowledgeResults('');
 }
@@ -477,6 +478,45 @@ function showKnowledgeDetail(id){
   openDrill(r.title,'<div class="drill-section"><div style="display:flex;gap:8px;margin-bottom:12px"><span style="background:var(--brand-light);color:var(--brand);font-size:11px;padding:3px 10px;border-radius:12px">'+r.cat+'</span><span style="color:var(--text3);font-size:11px">来源: '+r.src+'</span></div><p style="font-size:14px;line-height:1.8;white-space:pre-wrap">'+r.content+'</p><div style="margin-top:16px">'+r.tags.map(function(t){return'<code style="margin:2px;padding:3px 8px;background:#F1F5F9;border-radius:4px;font-size:11px">#'+t+'</code>'}).join(' ')+'</div></div>');
 }
 
+// ============================================================
+// 报告中心 — 丰富报告卡片 + 点击查看完整内容
+// ============================================================
+
+var REPORTS=[
+  {icon:'📊',title:'华东区广告运营周报',date:'2026-07-28',age:'2小时前',author:'AI Agent',
+   summary:'本周华东区总消耗¥1,285万，环比+12.5%。ROI均值2.82，5个账户触发异常告警。千川消耗占比42%领先，搜索广告增速最快(+28%)。',
+   body:'<h3>一、核心指标</h3><table><tr><th>指标</th><th>本周</th><th>上周</th><th>环比</th></tr><tr><td>总消耗</td><td>¥1,285万</td><td>¥1,142万</td><td style="color:var(--success)">+12.5%</td></tr><tr><td>ROI</td><td>2.82</td><td>2.91</td><td style="color:var(--danger)">-3.1%</td></tr><tr><td>CTR</td><td>2.42%</td><td>2.38%</td><td style="color:var(--success)">+1.7%</td></tr></table><h3>二、异常账户</h3><p>杭州鲸灵ROI连续下降42%→建议立即出优化方案。成都星辉消耗骤降68%→疑似余额不足。</p><h3>三、产品线分布</h3><p>千川42% | 引擎31% | 搜索16% | 穿山甲11%。搜索广告增速最快，建议加大投入。</p>'},
+  {icon:'📋',title:'上海美妆科技 · 7月投放月报',date:'2026-07-27',age:'昨天',author:'AI Agent',
+   summary:'客户月消耗¥285万，ROI 3.3，趋势上升。千川贡献68%消耗，引擎32%。素材更新频率达标(每周5套)，CTR高于行业均值15%。',
+   body:'<h3>一、核心指标</h3><table><tr><th>指标</th><th>7月</th><th>6月</th><th>变化</th></tr><tr><td>消耗</td><td>¥285万</td><td>¥252万</td><td style="color:var(--success)">+13.1%</td></tr><tr><td>ROI</td><td>3.3</td><td>2.9</td><td style="color:var(--success)">+13.8%</td></tr><tr><td>CTR</td><td>2.7%</td><td>2.5%</td><td style="color:var(--success)">+8%</td></tr></table><h3>二、素材表现</h3><p>TOP3素材: "美妆教程式"(CTR 3.1%)、"素人测评"(CTR 2.9%)、"限时优惠"(CTR 2.7%)。建议加大教程式素材投入。</p><h3>三、优化建议</h3><p>1. 千川日预算从¥8万→¥10万(ROI支撑)；2. 测试搜索广告(美妆搜索量上升)；3. 增加直播切片素材占比。</p>'},
+  {icon:'🔬',title:'教育行业2026 Q2 广告趋势调研',date:'2026-07-26',age:'3天前',author:'Deep Research',
+   summary:'教育行业Q2广告投放总额增长18%，但合规门槛持续提高。职业技能培训子赛道增速最快(+35%)，搜索广告占比从8%升至15%。',
+   body:'<h3>一、市场规模</h3><p>Q2教育行业广告投放总额¥42亿，同比+18%。其中职业技能培训占比42%(增速+35%)，素质教育28%，学历教育18%，留学12%。</p><h3>二、平台分布</h3><p>千川38% | 引擎29% | 搜索15% | 其他18%。搜索广告增速最快(+87% YoY)，源于用户主动搜索"XX培训"习惯养成。</p><h3>三、政策影响</h3><p>3月新规后，K12学科类广告清零，非学科审核周期延长至3-5天。建议客户提前准备资质材料，避免投放中断。</p>'},
+  {icon:'💡',title:'杭州鲸灵网络 · ROI诊断报告',date:'2026-07-26',age:'3天前',author:'AI Agent',
+   summary:'诊断结论：ROI从2.5降至1.3，主因是素材疲劳(CTR-35%)+竞价激烈(CPA+22%)。建议：紧急更新5套素材，切换oCPM，测试新定向包。',
+   body:'<h3>一、问题定位</h3><table><tr><th>维度</th><th>变化</th><th>影响</th><th>根因</th></tr><tr><td>CTR</td><td>2.8%→1.8%</td><td>-35%</td><td>素材超3周未更新</td></tr><tr><td>CVR</td><td>1.5%→1.4%</td><td>-7%</td><td>基本持平</td></tr><tr><td>CPA</td><td>¥38→¥49</td><td>+29%</td><td>同品类竞价加剧</td></tr></table><h3>二、行动计划</h3><p>1.[紧急-24h] 上线5套新素材(真人解说+KOL混剪)；2.[短期-3天] 出价策略从手动切oCPM，目标成本¥42；3.[中期-1周] 测试25-35岁男性+一线城市新定向包。</p>'},
+  {icon:'📈',title:'2026 Q2 行业Benchmark季报',date:'2026-07-22',age:'6天前',author:'数据分析团队',
+   summary:'全行业CTR均值2.35%(环比+0.12pp)，ROI均值2.7(环比+0.2)。本地生活ROI最高(5.5)，金融ROI最低(1.8)。搜索广告eCPM均值¥42。',
+   body:'<h3>一、行业对比</h3><table><tr><th>行业</th><th>CTR</th><th>CVR</th><th>CPA</th><th>ROI</th></tr><tr><td>电商</td><td>2.1%</td><td>1.8%</td><td>¥45</td><td>2.6</td></tr><tr><td>游戏</td><td>2.8%</td><td>1.5%</td><td>¥38</td><td>2.2</td></tr><tr><td>教育</td><td>1.8%</td><td>2.5%</td><td>¥55</td><td>3.1</td></tr><tr><td>本地生活</td><td>3.2%</td><td>4.5%</td><td>¥18</td><td>5.5</td></tr></table>'},
+  {icon:'🎨',title:'AIGC创意素材效果分析报告',date:'2026-07-20',age:'1周前',author:'AI Lab',
+   summary:'AIGC生成素材占新增素材量的38%，CTR均值2.6%(略高于人工2.4%)。视频类AIGC素材完播率比人工高12%，但转化率低5%。建议：AIGC批量生产+人工精选优化。',
+   body:'<h3>一、AIGC素材表现</h3><table><tr><th>类型</th><th>占比</th><th>CTR</th><th>CVR</th><th>完播率</th></tr><tr><td>AIGC视频</td><td>22%</td><td>2.7%</td><td>1.7%</td><td>48%</td></tr><tr><td>AIGC图片</td><td>16%</td><td>2.4%</td><td>1.9%</td><td>-</td></tr><tr><td>人工视频</td><td>38%</td><td>2.5%</td><td>1.9%</td><td>43%</td></tr><tr><td>人工图片</td><td>24%</td><td>2.2%</td><td>1.8%</td><td>-</td></tr></table><h3>二、结论</h3><p>AIGC素材在吸引点击(CTR)和完播率上优于人工，但在转化(CVR)上略逊。推荐策略：AIGC批量生产覆盖量→人工精选TOP素材→在精选素材上人工微调提升转化。</p>'}
+];
+
+function renderReports(){
+  var grid=document.getElementById('report-grid');
+  if(!grid)return;
+  grid.innerHTML=REPORTS.map(function(r){
+    return'<div class="report-card" onclick="showReportDetail(\''+r.title+'\')"><div class="report-icon">'+r.icon+'</div><h4>'+r.title+'</h4><p>'+r.summary+'</p><div class="report-meta"><span>'+r.date+'</span><span>'+r.author+'</span><span>'+r.age+'</span></div></div>';
+  }).join('');
+}
+
+function showReportDetail(title){
+  var r=REPORTS.find(function(rp){return rp.title===title});
+  if(!r)return;
+  openDrill(r.title,r.body);
+}
+
 // 知识库搜索事件
 document.getElementById('knowledge-search-input')&&document.getElementById('knowledge-search-input').addEventListener('input',function(e){renderKnowledgeResults(e.target.value)});
 
@@ -681,7 +721,9 @@ function init() {
   initNavigation();
   initChat();
   renderDashboard();
+  renderReports();
   renderCustomerCards();
+  renderKnowledgeResults('');
 }
 
 document.addEventListener('DOMContentLoaded', init);
