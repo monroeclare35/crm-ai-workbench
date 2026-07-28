@@ -28,4 +28,6 @@ ENV PYTHONIOENCODING=utf-8
 ENV PORT=10000
 
 EXPOSE 10000
+RUN chown -R node:node /app
+USER node
 CMD ["python3", "server.py"]
